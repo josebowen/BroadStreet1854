@@ -141,7 +141,7 @@ nav button.next{background:var(--ink);color:var(--paper)}
     <button id="bReg"><span class="ic">📜</span>Registrar<span class="badge" id="regBadge"></span></button>
     <button id="bZone"><span class="ic">🧭</span>Nearest pump</button>
     <button id="bNotes"><span class="ic">🗂️</span>Case notes<span class="badge" id="noteBadge"></span></button>
-    <button id="bNext" class="next"><span class="ic">🌙</span>End day</button>
+    <button id="bNext" class="next"><span class="ic">🌙</span>Next Day</button>
   </nav>
 
   <div id="sheet"><div class="grab"></div><button id="xClose" aria-label="Close">×</button><div class="inner" id="sheetInner"></div></div>
@@ -154,10 +154,9 @@ nav button.next{background:var(--ink);color:var(--paper)}
       <li>Tap places and pumps on the map to <b>investigate</b>. You have <b>two visits a day</b>.</li>
       <li>The <b>Registrar</b> shows where the dead lived.</li>
       <li>When you are ready, ask the Board to <b>remove a pump handle</b>. They will push back. Answer them with your evidence.</li>
-      <li>There is no clock. Take your time, then <b>end the day</b>.</li>
+      <li>Advance to the <b>next day</b> when you are ready.</li>
     </ul>
     <button class="btn red" id="start">Begin</button>
-    <div class="fine">Simplified map and timeline based on Snow's 1855 report and the parish inquiry. Stuck? Help will come.</div>
   </div>
 
   <div class="screen hide" id="end"></div>
@@ -316,7 +315,7 @@ function addCard(id){
 }
 function cardHTML(id,isNew){const c=CARDS[id];return `<div class="card ${isNew?"new":""}"><div class="from">${c.from}</div><div class="t">${c.t}</div><div class="body">${c.b}</div></div>`}
 function useVisit(){
-  if(S.acts<=0){toast("No visits left today. End the day.");return false}
+  if(S.acts<=0){toast("No visits left today. Tap Next Day.");return false}
   S.acts--;render();return true;
 }
 
@@ -334,7 +333,7 @@ function openPump(p){
   let h=`<h2>${p.name}</h2><p>${p.note}</p>`+
     (n===null?`<p class="cost">Plot the dead from the Registrar to see who lived nearest.</p>`:`<p><b>${n}</b> of the plotted dead lived closer to this pump than to any other.</p>`);
   if(p.test){h+=has(p.test)?cardHTML(p.test):`<button class="btn ghost" id="test">Examine the water</button><div class="cost">Uses 1 of today's visits</div>`}
-  h+=`<button class="btn red" id="pet">Ask the Board to remove this handle</button><div class="cost">The Board meets once a day. A failed request ends the day.</div>`;
+  h+=`<button class="btn red" id="pet">Ask the Board to remove this handle</button><div class="cost">The Board meets once a day. A failed request moves you to the next day.</div>`;
   sheet(h);
   if($("test"))$("test").onclick=()=>{if(!useVisit())return;addCard(p.test);S.unseen=Math.max(0,S.unseen-1);render();openPump(p)};
   $("pet").onclick=()=>petition(p);
@@ -374,7 +373,7 @@ function petition(p){
   if(S.plotted<0){sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>You come with no figures at all. Where did the dead live?</div><p class="cost">Get the Registrar's returns first. This did not cost you the day.</p>`);S.petitions--;return}
   if(p.id!=="broad"){
     const why=p.id==="marl"?"Hardly anyone drinks from that pump. The neighbours say it stinks, and they walk to Broad Street instead.":"Few of the dead lived near that pump.";
-    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${why}</div><p>The Board refuses.</p><button class="btn red" id="ok">End the day</button>`);
+    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${why}</div><p>The Board refuses.</p><button class="btn red" id="ok">Next Day</button>`);
     $("ok").onclick=()=>{endDay("The Board refused. A day lost.");if(p.id==="marl")hint("A foul smell is a clue about the air, not about who drank the water. Where did the people near that pump actually get theirs?")};
     return;
   }
@@ -393,7 +392,7 @@ function ask(i){
     if(o.ok.includes(c)){vib(15);sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>You</small>${CARDS[c].b}</div><p>The Board murmurs. That answer holds.</p><button class="btn red" id="nx">${i+1<OBJ.length?"Next objection":"Hear their decision"}</button>`);$("nx").onclick=()=>ask(i+1);return}
     vib([40,40,40]);
     const said=c?`That doesn't answer the objection. The Board is not persuaded.`:`Without an answer, the Board will not act today.`;
-    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${o.q}</div><p>${said}</p><button class="btn red" id="ok">End the day</button>`);
+    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${o.q}</div><p>${said}</p><button class="btn red" id="ok">Next Day</button>`);
     $("ok").onclick=()=>{endDay("The Board adjourned unconvinced.");hint(o.miss)};
   });
 }
@@ -407,13 +406,13 @@ function nextHint(){
   if(S.acts>0&&!has("workhouse")&&!has("brewery"))return "If it were the air, everyone breathing it would suffer. Is anyone near the pit or the pump spared?";
   if(S.acts>0&&!has("marlTest"))return "The Little Marlborough pump sits right by the pit. Is anyone drinking from it?";
   if(S.acts>0&&!has("homes"))return "Some of the dead lived closer to other pumps. Their families might explain that.";
-  if(S.acts===0)return "You have used today's visits. End the day when you are ready.";
-  if(!has("hampstead"))return "The post may bring news from outside Soho. End the day to see.";
+  if(S.acts===0)return "You have used today's visits. Tap Next Day when you are ready.";
+  if(!has("hampstead"))return "The post may bring news from outside Soho. Tap Next Day to see.";
   return "You may have enough to face the Board. Choose a pump and make your case.";
 }
-setInterval(()=>{if(S.started&&!S.over&&performance.now()-S.lastAct>22000){hint(nextHint());S.lastAct=performance.now()}},1000);
+setInterval(()=>{if(S.started&&!S.over&&performance.now()-S.lastAct>10000){hint(nextHint());S.lastAct=performance.now()}},1000);
 
-$("start").onclick=()=>{$("intro").classList.add("hide");S.started=true;S.lastAct=performance.now()-12000;render()};
+$("start").onclick=()=>{$("intro").classList.add("hide");S.started=true;S.lastAct=performance.now();render()};
 render();
 
 function win(){
