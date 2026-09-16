@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Broad Street, 1854</title>
+<meta name="description" content="A three-minute simulation: find the source of the 1854 Soho cholera outbreak.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3e9d2; --paper2:#e8dab9; --ink:#2b2118; --ink2:#5a4a3a; --muted:#8a7760;
+  --street:#fbf6ea; --block:#e2d2ae; --green:#b9c79a; --red:#9e2a1f; --gold:#b98a2e; --blue:#2f5d7c;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1c1510;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+body{display:flex;justify-content:center}
+#app{position:relative;width:100%;max-width:480px;height:100dvh;background:
+  radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.35),transparent 60%),
+  radial-gradient(ellipse at 80% 90%,rgba(120,80,30,.18),transparent 55%),var(--paper);
+  display:flex;flex-direction:column;overflow:hidden}
+.serif{font-family:"IM Fell English",Georgia,serif}
+/* header */
+header{padding:10px 14px 8px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid rgba(43,33,24,.25)}
+.hrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.date{font-family:"IM Fell English",serif;font-size:22px}
+.toll{font-size:13px;color:var(--ink2);text-align:right}
+.toll b{font-size:22px;color:var(--red);font-family:"IM Fell English",serif;font-weight:400}
+.bar{height:5px;background:rgba(43,33,24,.12);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--red));transition:width .5s linear}
+.sub{font-size:11px;color:var(--muted);margin-top:3px;display:flex;justify-content:space-between}
+/* map */
+#mapwrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px}
+svg#map{width:100%;height:100%;max-height:100%;touch-action:manipulation}
+.st{stroke:var(--street);stroke-linecap:square}
+.stlabel{font-family:"IM Fell English",serif;font-size:9px;fill:var(--ink2);letter-spacing:.08em;pointer-events:none}
+.pump{cursor:pointer}
+.pump circle.hit{fill:transparent}
+.pump .body{fill:var(--blue);stroke:var(--paper);stroke-width:1.5;transition:transform .2s}
+.pump.sel .ring{stroke:var(--red);stroke-width:2.5;fill:none;animation:pulse 1.2s infinite}
+.pump.gone .body{fill:#9aa}
+@keyframes pulse{50%{r:13}}
+.death{fill:var(--ink)}
+.death.new{animation:drop .5s ease-out}
+@keyframes drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1}}
+.zone{mix-blend-mode:multiply;transition:opacity .6s}
+.place{fill:#d9c49a;stroke:var(--ink2);stroke-width:.8;stroke-dasharray:2 2}
+.place.lit{fill:#f0d78c;stroke:var(--gold);stroke-width:1.5;stroke-dasharray:none}
+.plabel{font-size:7px;font-family:Inter;font-weight:600;fill:var(--ink2);pointer-events:none}
+/* hint */
+#hint{position:absolute;left:12px;right:12px;top:8px;background:var(--ink);color:var(--paper);border-radius:12px;padding:10px 12px 10px 44px;font-size:14px;line-height:1.35;box-shadow:0 6px 20px rgba(0,0,0,.3);transform:translateY(-220%);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);z-index:5}
+#hint.show{transform:none}
+#hint::before{content:"✝";position:absolute;left:14px;top:9px;font-size:20px;color:var(--gold)}
+#hint small{display:block;color:#c9b894;font-size:11px;margin-bottom:2px}
+#toast{position:absolute;left:50%;bottom:14px;transform:translate(-50%,40px);opacity:0;background:var(--red);color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;transition:.3s;white-space:nowrap;z-index:5}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+/* actions */
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid rgba(43,33,24,.25);background:rgba(232,218,185,.6)}
+nav button{position:relative;border:0;border-radius:12px;background:var(--street);color:var(--ink);padding:8px 2px 7px;font:600 11px Inter,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 1px 0 rgba(43,33,24,.25);min-height:58px}
+nav button .ic{font-size:21px;line-height:1}
+nav button.on{background:var(--ink);color:var(--paper)}
+nav button:disabled{opacity:.4}
+nav button.primary:not(:disabled){background:var(--red);color:#fff;animation:glow 1.6s infinite}
+@keyframes glow{50%{box-shadow:0 0 0 4px rgba(158,42,31,.25)}}
+.badge{position:absolute;top:4px;right:10px;background:var(--red);color:#fff;border-radius:9px;min-width:18px;height:18px;font-size:11px;line-height:18px;padding:0 4px}
+.badge:empty{display:none}
+.wiggle{animation:wig .5s}
+@keyframes wig{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+/* sheet */
+#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1);z-index:10;max-height:70%;display:flex;flex-direction:column}
+#sheet.show{transform:none}
+#sheet .grab{width:40px;height:4px;border-radius:2px;background:rgba(43,33,24,.3);margin:8px auto 4px}
+#sheet .inner{padding:4px 18px 18px;overflow:auto;padding-bottom:max(18px,env(safe-area-inset-bottom))}
+#sheet h2{font-family:"IM Fell English",serif;font-weight:400;font-size:24px;margin:4px 0 6px}
+#sheet p{font-size:15px;line-height:1.45;margin:6px 0}
+.letter{border:1px solid rgba(43,33,24,.2);background:#fbf5e6;border-radius:10px;padding:10px 12px;margin:8px 0;cursor:pointer}
+.letter.unread{border-left:4px solid var(--red)}
+.letter .from{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.letter .t{font-family:"IM Fell English",serif;font-size:18px}
+.letter .body{display:none;font-size:14px;line-height:1.45;margin-top:6px}
+.letter.open .body{display:block}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font:700 15px Inter,system-ui,sans-serif;margin-top:10px}
+.btn.red{background:var(--red);color:#fff}
+.btn.ghost{background:transparent;border:1px solid rgba(43,33,24,.3);color:var(--ink)}
+/* overlay screens */
+.screen{position:absolute;inset:0;z-index:20;background:rgba(28,21,16,.94);color:var(--paper);display:flex;flex-direction:column;justify-content:center;padding:28px;text-align:left}
+.screen.hide{display:none}
+.screen h1{font-family:"IM Fell English",serif;font-weight:400;font-size:40px;line-height:1.05;margin:0 0 6px}
+.screen .kicker{color:var(--gold);letter-spacing:.14em;text-transform:uppercase;font-size:12px;font-weight:700}
+.screen p{font-size:16px;line-height:1.5;color:#e9dcc0}
+.screen ul{padding-left:18px;margin:6px 0 4px;color:#e9dcc0;font-size:15px;line-height:1.55}
+.screen .btn.red{margin-top:22px}
+.screen .fine{font-size:11px;color:#9f8e72;margin-top:18px}
+.handle{font-size:64px;text-align:center;animation:lift 1.2s ease-out}
+@keyframes lift{from{transform:translateY(20px) rotate(-30deg);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="hrow">
+      <div class="date" id="date">31 August 1854</div>
+      <div class="toll">dead <b id="toll">0</b></div>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="sub"><span id="status">Golden Square, Soho</span><span id="plotted">0 plotted</span></div>
+  </header>
+
+  <div id="mapwrap">
+    <div id="hint"><small>Rev. Henry Whitehead</small><span id="hinttext"></span></div>
+    <svg id="map" viewBox="0 0 360 480" preserveAspectRatio="xMidYMid meet" aria-label="Map of Soho, 1854">
+      <rect x="0" y="0" width="360" height="480" fill="var(--block)" rx="6"/>
+      <g id="zones"></g>
+      <g id="streets"></g>
+      <g id="places"></g>
+      <g id="deaths"></g>
+      <g id="pumps"></g>
+    </svg>
+    <div id="toast"></div>
+  </div>
+
+  <nav>
+    <button id="bReg"><span class="ic">📜</span>Registrar<span class="badge" id="regBadge"></span></button>
+    <button id="bZone"><span class="ic">🧭</span>Nearest pump</button>
+    <button id="bMail"><span class="ic">✉️</span>Letters<span class="badge" id="mailBadge"></span></button>
+    <button id="bAct" class="primary" disabled><span class="ic">⚙️</span>Remove handle</button>
+  </nav>
+
+  <div id="sheet"><div class="grab"></div><div class="inner" id="sheetInner"></div></div>
+
+  <div class="screen" id="intro">
+    <div class="kicker">A three-minute simulation</div>
+    <h1>Broad Street, 1854</h1>
+    <p>Cholera is killing Soho. The Board of Guardians blames "bad air." You are Dr. John Snow, and you think the killer is in the water.</p>
+    <ul>
+      <li>Plot the dead from the <b>Registrar</b>.</li>
+      <li>Tap any <b>pump</b> to inspect it.</li>
+      <li>Read the <b>letters</b> as they arrive.</li>
+      <li>Convince the Board to <b>remove the handle</b> of the right pump before the week is out.</li>
+    </ul>
+    <button class="btn red" id="start">Begin</button>
+    <div class="fine">Simplified map and timeline based on Snow's 1855 report. Stuck? Help will come.</div>
+  </div>
+
+  <div class="screen hide" id="end"></div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+
+/* ---------- geography (simplified Soho) ---------- */
+const streets=[
+  ["REGENT ST",30,0,30,480,"v"],["OXFORD ST",0,30,360,30,"h"],
+  ["GT MARLBOROUGH ST",30,105,250,105,"h"],["LT MARLBOROUGH",110,160,245,160,"h"],
+  ["POLAND ST",110,30,110,250,"v"],["MARSHALL ST",170,105,170,400,"v"],
+  ["BERWICK ST",260,30,260,400,"v"],["DEAN ST",330,30,330,480,"v"],
+  ["BROAD ST",30,250,330,250,"h"],["BREWER ST",30,400,330,400,"h"],
+  ["CAMBRIDGE ST",215,250,215,400,"v"],["COVENTRY ST",30,460,360,460,"h"]
+];
+const pumps=[
+  {id:"broad",name:"Broad Street pump",x:205,y:250,
+   note:"The busiest pump in the parish. People walk past nearer pumps to fetch its water because it tastes cold and clean."},
+  {id:"marl",name:"Little Marlborough St pump",x:140,y:160,
+   note:"Residents complain it smells foul, so almost nobody drinks from it."},
+  {id:"oxford",name:"Oxford Street pump",x:205,y:30,note:"A quiet pump on the northern edge of the parish."},
+  {id:"dean",name:"Dean Street pump",x:330,y:160,note:"Serves the eastern streets toward Soho Square."},
+  {id:"rupert",name:"Rupert Street pump",x:300,y:460,note:"Far to the south-east. Hard to reach from Broad Street through the narrow lanes."},
+  {id:"warwick",name:"Warwick Street pump",x:60,y:430,note:"Serves the lanes by Regent Street."},
+  {id:"crown",name:"Crown Chapel pump",x:30,y:185,note:"On the Regent Street side, by the chapel."}
+];
+const places={
+  brewery:{x:222,y:226,w:34,h:18,label:"Brewery"},
+  workhouse:{x:116,y:180,w:48,h:56,label:"Workhouse"},
+  square:{x:60,y:290,w:90,h:80,label:"Golden Sq"}
+};
+
+/* ---------- deaths (seeded, clustered on the Broad St pump) ---------- */
+let seed=1854;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const inRect=(x,y,r,pad=2)=>x>r.x-pad&&x<r.x+r.w+pad&&y>r.y-pad&&y<r.y+r.h+pad;
+const nearestPump=(x,y,list)=>{let b=null,bd=1e9;for(const p of list){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;b=p}}return b};
+const onStreet=(x,y)=>streets.some(s=>s[5]==="h"?Math.abs(y-s[2])<8&&x>=s[1]&&x<=s[3]:Math.abs(x-s[1])<8&&y>=s[2]&&y<=s[4]);
+const deaths=[];
+while(deaths.length<380){
+  const x=rnd()*350+5,y=rnd()*470+5;
+  if(onStreet(x,y)||inRect(x,y,places.brewery,4)||inRect(x,y,places.square,-4))continue;
+  if(inRect(x,y,places.workhouse)&&rnd()>.03)continue;
+  const d=Math.hypot(x-205,y-250);
+  const p=Math.exp(-d/40)*.95+.004;
+  if(rnd()<p)deaths.push({x,y,day:0});
+}
+// assign to days, weighted early (the outbreak peaked in its first days)
+const dayW=[.10,.24,.22,.14,.10,.08,.06,.06];
+deaths.forEach(d=>{let r=rnd(),a=0;for(let i=0;i<dayW.length;i++){a+=dayW[i];if(r<=a){d.day=i;return}}d.day=7});
+
+/* ---------- draw ---------- */
+const gS=$("streets"),gP=$("pumps"),gD=$("deaths"),gZ=$("zones"),gPl=$("places");
+el("rect",{x:places.square.x,y:places.square.y,width:places.square.w,height:places.square.h,fill:"var(--green)",rx:4},gS);
+streets.forEach(s=>el("line",{x1:s[1],y1:s[2],x2:s[3],y2:s[4],class:"st","stroke-width":s[0]==="BROAD ST"?13:10},gS));
+streets.forEach(s=>{
+  const t=el("text",{class:"stlabel"},gS);t.textContent=s[0];
+  if(s[5]==="h"){t.setAttribute("x",s[0]==="BROAD ST"?44:s[0]==="LT MARLBOROUGH"?178:s[1]+12);t.setAttribute("y",s[2]+3)}
+  else{const cx=s[1]+3,cy=s[0]==="REGENT ST"?150:s[0]==="CAMBRIDGE ST"?395:s[2]+70;t.setAttribute("transform",`translate(${cx},${cy}) rotate(-90)`)}
+});
+["brewery","workhouse"].forEach(k=>{const p=places[k];
+  p.node=el("rect",{x:p.x,y:p.y,width:p.w,height:p.h,rx:3,class:"place"},gPl);
+  const t=el("text",{x:p.x+p.w/2,y:p.y+p.h/2+2.5,"text-anchor":"middle",class:"plabel"},gPl);t.textContent=p.label});
+{const t=el("text",{x:105,y:334,"text-anchor":"middle",class:"stlabel"},gS);t.textContent="GOLDEN SQ"}
+
+pumps.forEach(p=>{
+  const g=el("g",{class:"pump",transform:`translate(${p.x},${p.y})`},gP);
+  el("circle",{r:18,class:"hit"},g);
+  el("circle",{r:10,class:"ring"},g);
+  el("circle",{r:6.5,class:"body"},g);
+  el("rect",{x:-1.5,y:-11,width:3,height:6,fill:"var(--blue)",rx:1},g);
+  p.node=g;
+  g.addEventListener("click",e=>{e.stopPropagation();selectPump(p)});
+});
+
+// nearest-pump zones
+const zoneCol={broad:"#e6a17a",marl:"#b7c9a8",oxford:"#c4b7d6",dean:"#a9c6d6",rupert:"#d9c78c",warwick:"#c9a9b9",crown:"#a8d0c0"};
+for(let y=0;y<480;y+=10)for(let x=0;x<360;x+=10){
+  const p=nearestPump(x+5,y+5,pumps);
+  el("rect",{x,y,width:10.3,height:10.3,fill:zoneCol[p.id]},gZ);
+}
+gZ.style.opacity=0;gZ.classList.add("zone");
+
+/* ---------- state ---------- */
+const DAY_MS=16000, DAYS=9;           // 31 Aug .. 8 Sep, ~2.4 min
+const dates=["31 August","1 September","2 September","3 September","4 September","5 September","6 September","7 September","8 September"];
+const S={t0:0,day:0,toll:0,plottedDay:-1,zones:false,sel:null,letters:[],hintStep:0,lastAct:0,over:false,petitions:0,readAny:false};
+const lettersAll=[
+  {at:1,from:"Registrar General",t:"Deaths are not spread evenly",
+   b:"The weekly returns show the dead crowded into a few streets around Golden Square. Other districts of London are barely touched."},
+  {at:2,key:"brewery",from:"Mr Huggins, Lion Brewery",t:"None of my men are ill",
+   b:"Seventy men work at my brewery on Broad Street and not one has died. They are given beer to drink. We have our own well and I doubt any of them ever touch the street pump."},
+  {at:3,from:"Your own notebook",t:"The water looks clean",
+   b:"I examined water from the Broad Street pump under the microscope. It looks clearer than most in the parish. Whatever is killing people, I cannot see it. The Board will say that proves it is the air."},
+  {at:3,key:"workhouse",from:"Master of the Poland Street Workhouse",t:"535 inmates, very few deaths",
+   b:"We sit in the middle of the stricken streets, yet only a handful of our people have died. The workhouse has its own well."},
+  {at:4,from:"A letter from Hampstead",t:"A widow, miles away",
+   b:"Mrs Eley once lived on Broad Street and liked its water so much that a cart brought her a bottle every day. She died of cholera this week. Nobody else in Hampstead has it. Her niece, who visited and drank the same water, has also died."}
+];
+
+/* ---------- ui helpers ---------- */
+let toastT;const toast=m=>{const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2200)};
+let hintT;const hint=m=>{$("hinttext").textContent=m;$("hint").classList.add("show");clearTimeout(hintT);hintT=setTimeout(()=>$("hint").classList.remove("show"),7000)};
+$("hint").onclick=()=>$("hint").classList.remove("show");
+const sheet=(html)=>{$("sheetInner").innerHTML=html;$("sheet").classList.add("show")};
+const closeSheet=()=>$("sheet").classList.remove("show");
+$("map").addEventListener("click",()=>{closeSheet();selectPump(null)});
+const touch=()=>{S.lastAct=performance.now();$("hint").classList.remove("show")};
+const vib=n=>{try{navigator.vibrate&&navigator.vibrate(n)}catch(e){}};
+
+function selectPump(p){
+  S.sel=p;pumps.forEach(q=>q.node.classList.toggle("sel",q===p));
+  $("bAct").disabled=!p||S.over;
+  if(!p)return;touch();
+  const nearby=S.plottedDay<0?null:deaths.filter(d=>d.day<=S.plottedDay&&nearestPump(d.x,d.y,pumps)===p).length;
+  sheet(`<h2>${p.name}</h2><p>${p.note}</p>`+
+    (nearby===null?`<p style="color:var(--muted)">Plot the dead from the Registrar to see who lived nearest this pump.</p>`
+      :`<p><b>${nearby}</b> of the plotted dead lived closer to this pump than to any other.</p>`)+
+    `<button class="btn red" id="petBtn">Petition the Board: remove this handle</button>`);
+  $("petBtn").onclick=petition;
+}
+
+/* ---------- actions ---------- */
+$("bReg").onclick=()=>{
+  touch();closeSheet();
+  if(S.plottedDay>=S.day){toast("No new returns yet");return}
+  const from=S.plottedDay+1;S.plottedDay=S.day;
+  let n=0;
+  deaths.forEach((d,i)=>{if(d.day>=from&&d.day<=S.day){
+    setTimeout(()=>{el("rect",{x:d.x-2.2,y:d.y-.9,width:4.4,height:1.8,class:"death new"},gD)},n*12);n++}});
+  vib(20);
+  updateBadges();
+  setTimeout(()=>$("plotted").textContent=`${deaths.filter(d=>d.day<=S.plottedDay).length} plotted`,n*12);
+};
+$("bZone").onclick=()=>{
+  touch();S.zones=!S.zones;$("bZone").classList.toggle("on",S.zones);gZ.style.opacity=S.zones?.55:0;
+  if(S.zones)toast("Shaded by nearest pump");
+};
+$("bMail").onclick=()=>{
+  touch();
+  const html=S.letters.slice().reverse().map((l,i)=>`<div class="letter ${l.read?"":"unread"}" data-i="${S.letters.indexOf(l)}"><div class="from">${l.from} · ${dates[l.at]}</div><div class="t">${l.t}</div><div class="body">${l.b}</div></div>`).join("");
+  sheet(`<h2>Letters</h2>`+(html||`<p style="color:var(--muted)">Nothing yet. Letters arrive as the week goes on.</p>`));
+  document.querySelectorAll(".letter").forEach(n=>n.onclick=()=>{
+    const l=S.letters[+n.dataset.i];n.classList.toggle("open");n.classList.remove("unread");
+    if(!l.read){l.read=true;S.readAny=true;if(l.key){places[l.key].node.classList.add("lit")}updateBadges()}
+  });
+};
+$("bAct").onclick=()=>{if(S.sel)petition()};
+
+function petition(){
+  touch();if(S.over||!S.sel)return;S.petitions++;
+  const p=S.sel;
+  if(p.id!=="broad"){
+    closeSheet();$("bAct").classList.add("wiggle");setTimeout(()=>$("bAct").classList.remove("wiggle"),500);
+    vib([40,40,40]);toast("The Board refuses. Half a day lost.");
+    S.t0-=DAY_MS/2;
+    hint(p.id==="marl"?"That pump smells bad, but look: almost nobody who died lived near it. Bad smell is not the same as bad water."
+      :"The Board wants to know why this pump. Where do the dead cluster?");
+    return;
+  }
+  if(S.plottedDay<1){
+    closeSheet();toast("The Board wants evidence.");S.t0-=DAY_MS/3;
+    hint("The Guardians believe in bad air. Show them where the dead lived first. Tap the Registrar.");return;
+  }
+  win();
+}
+
+function updateBadges(){
+  const unplot=S.day>S.plottedDay?"!":"";$("regBadge").textContent=unplot;
+  const un=S.letters.filter(l=>!l.read).length;$("mailBadge").textContent=un||"";
+}
+
+/* ---------- hints (progressive, idle-triggered) ---------- */
+function nextHint(){
+  if(S.plottedDay<0)return "Start with the evidence. Tap the Registrar to plot where the dead lived.";
+  if(S.day>S.plottedDay)return "New death returns are in. Tap the Registrar again.";
+  if(!S.zones)return "The marks crowd together. Tap 'Nearest pump' to see which pump each household would use.";
+  if(!S.readAny&&S.letters.length)return "You have letters. Some places do not fit the pattern, and they matter.";
+  if(!S.sel)return "Which pump sits in the middle of the black marks? Tap it.";
+  return "When you are sure, petition the Board to remove that pump's handle.";
+}
+
+/* ---------- loop ---------- */
+function tick(now){
+  if(S.over)return;
+  const el_=now-S.t0, dayF=el_/DAY_MS, day=Math.min(DAYS-1,Math.floor(dayF));
+  if(day!==S.day){S.day=day;$("date").textContent=dates[day]+" 1854";vib(10);
+    lettersAll.forEach(l=>{if(l.at===day&&!l.sent){l.sent=true;S.letters.push({...l,read:false});toast("✉️ A letter has arrived")}});
+    updateBadges();
+  }
+  // toll rises continuously
+  const target=deaths.filter(d=>d.day<=day).length;
+  if(S.toll<target&&(now|0)%3===0){S.toll++;$("toll").textContent=S.toll}
+  $("bar").style.width=Math.min(100,dayF/DAYS*100)+"%";
+  const left=Math.max(0,DAYS-dayF);$("status").textContent=left<2?"The Board meets for the last time":`${Math.ceil(left)} days before the Board adjourns`;
+  if(now-S.lastAct>11000){hint(nextHint());S.lastAct=now}
+  if(dayF>=DAYS){lose();return}
+  requestAnimationFrame(tick);
+}
+
+function start(){
+  $("intro").classList.add("hide");
+  S.t0=performance.now();S.lastAct=S.t0-6000;updateBadges();
+  requestAnimationFrame(tick);
+}
+$("start").onclick=start;
+
+function win(){
+  S.over=true;closeSheet();vib([30,60,120]);
+  S.sel.node.classList.add("gone");
+  const secs=Math.round((performance.now()-S.t0)/1000);
+  setTimeout(()=>{
+    const e=$("end");e.classList.remove("hide");
+    e.innerHTML=`<div class="handle">🔧</div><div class="kicker">${dates[S.day]} 1854</div>
+    <h1>The handle comes off.</h1>
+    <p>You traced the deaths to the Broad Street pump in ${secs} seconds${S.petitions>1?`, after ${S.petitions-1} wrong petition${S.petitions>2?"s":""}`:""}.</p>
+    <p style="font-size:14px;color:#bfae8e">The real Board removed it on 8 September 1854. A baby's soiled nappies, rinsed into a cesspool beside the well at 40 Broad Street, had likely started it all.</p>
+    <button class="btn red" onclick="location.reload()">Play again</button>`;
+  },700);
+}
+function lose(){
+  S.over=true;closeSheet();$("bAct").disabled=true;
+  const e=$("end");e.classList.remove("hide");
+  e.innerHTML=`<div class="kicker">8 September 1854</div><h1>The Board adjourned.</h1>
+  <p>The Guardians went home still blaming the air, and the pump kept pouring.</p>
+  <p style="font-size:14px;color:#bfae8e">Try again. Plot the dead, shade the map, and read what the brewery and the workhouse have to say.</p>
+  <button class="btn red" onclick="location.reload()">Try again</button>`;
+}
+})();
+</script>
+</body>
+</html>
