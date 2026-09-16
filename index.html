@@ -55,7 +55,7 @@ svg#map{width:100%;height:100%;max-height:100%;touch-action:manipulation}
 #toast{position:absolute;left:50%;bottom:14px;transform:translate(-50%,40px);opacity:0;background:var(--red);color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;transition:.3s;white-space:nowrap;z-index:5}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 /* actions */
-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid rgba(43,33,24,.25);background:rgba(232,218,185,.6)}
+nav{position:relative;z-index:12;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid rgba(43,33,24,.25);background:rgba(232,218,185,.6)}
 nav button{position:relative;border:0;border-radius:12px;background:var(--street);color:var(--ink);padding:8px 2px 7px;font:600 11px Inter,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 1px 0 rgba(43,33,24,.25);min-height:58px}
 nav button .ic{font-size:21px;line-height:1}
 nav button.on{background:var(--ink);color:var(--paper)}
@@ -67,7 +67,7 @@ nav button.primary:not(:disabled){background:var(--red);color:#fff;animation:glo
 .wiggle{animation:wig .5s}
 @keyframes wig{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
 /* sheet */
-#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1);z-index:10;max-height:70%;display:flex;flex-direction:column}
+#sheet{position:absolute;left:0;right:0;bottom:var(--navh,0px);background:var(--paper);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.35);transform:translateY(calc(100% + var(--navh,0px) + 20px));transition:transform .3s cubic-bezier(.2,.9,.3,1);z-index:10;max-height:68%;display:flex;flex-direction:column}
 #sheet.show{transform:none}
 #sheet .grab{width:40px;height:4px;border-radius:2px;background:rgba(43,33,24,.3);margin:8px auto 4px}
 #sheet .inner{padding:4px 18px 18px;overflow:auto;padding-bottom:max(18px,env(safe-area-inset-bottom))}
@@ -93,6 +93,24 @@ nav button.primary:not(:disabled){background:var(--red);color:#fff;animation:glo
 .screen .fine{font-size:11px;color:#9f8e72;margin-top:18px}
 .handle{font-size:64px;text-align:center;animation:lift 1.2s ease-out}
 @keyframes lift{from{transform:translateY(20px) rotate(-30deg);opacity:0}}
+.place.pit{fill:#bda88a;stroke:#6b5a44;stroke-dasharray:1 2}
+.place.done{stroke:var(--gold);stroke-width:1.5;stroke-dasharray:none}
+.placeg{cursor:pointer}
+.acts{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--red)}
+.dot.used{background:rgba(43,33,24,.18)}
+nav button.next{background:var(--ink);color:var(--paper)}
+.card{border:1px solid rgba(43,33,24,.2);background:#fbf5e6;border-radius:10px;padding:10px 12px;margin:8px 0}
+.card .from{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.card .t{font-family:"IM Fell English",serif;font-size:18px}
+.card .body{font-size:14px;line-height:1.45;margin-top:4px}
+.card.new{border-left:4px solid var(--red)}
+.obj{background:var(--ink);color:var(--paper);border-radius:12px;padding:12px 14px;margin:8px 0 4px;font-size:15px;line-height:1.45}
+.obj small{display:block;color:#c9b894;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.opt{display:block;width:100%;text-align:left;border:1px solid rgba(43,33,24,.3);background:#fbf5e6;border-radius:10px;padding:11px 12px;margin:7px 0;font:600 14px Inter,system-ui,sans-serif;color:var(--ink)}
+.opt.none{font-weight:400;color:var(--muted)}
+#xClose{position:absolute;right:10px;top:6px;border:0;background:transparent;font-size:26px;line-height:1;color:var(--ink2);padding:4px 8px}
+.cost{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
 </style>
 </head>
 <body>
@@ -103,7 +121,7 @@ nav button.primary:not(:disabled){background:var(--red);color:#fff;animation:glo
       <div class="toll">dead <b id="toll">0</b></div>
     </div>
     <div class="bar"><i id="bar"></i></div>
-    <div class="sub"><span id="status">Golden Square, Soho</span><span id="plotted">0 plotted</span></div>
+    <div class="sub"><span class="acts" id="acts"></span><span id="status">Day 1 of 9</span></div>
   </header>
 
   <div id="mapwrap">
@@ -122,24 +140,24 @@ nav button.primary:not(:disabled){background:var(--red);color:#fff;animation:glo
   <nav>
     <button id="bReg"><span class="ic">📜</span>Registrar<span class="badge" id="regBadge"></span></button>
     <button id="bZone"><span class="ic">🧭</span>Nearest pump</button>
-    <button id="bMail"><span class="ic">✉️</span>Letters<span class="badge" id="mailBadge"></span></button>
-    <button id="bAct" class="primary" disabled><span class="ic">⚙️</span>Remove handle</button>
+    <button id="bNotes"><span class="ic">🗂️</span>Case notes<span class="badge" id="noteBadge"></span></button>
+    <button id="bNext" class="next"><span class="ic">🌙</span>End day</button>
   </nav>
 
-  <div id="sheet"><div class="grab"></div><div class="inner" id="sheetInner"></div></div>
+  <div id="sheet"><div class="grab"></div><button id="xClose" aria-label="Close">×</button><div class="inner" id="sheetInner"></div></div>
 
   <div class="screen" id="intro">
-    <div class="kicker">A three-minute simulation</div>
+    <div class="kicker">A simulation · about five minutes</div>
     <h1>Broad Street, 1854</h1>
-    <p>Cholera is killing Soho. The Board of Guardians blames "bad air." You are Dr. John Snow, and you think the killer is in the water.</p>
+    <p>Cholera is killing Soho. The Board of Guardians blames the foul air. You are Dr. John Snow, and you suspect the water. The evidence will not all point the same way.</p>
     <ul>
-      <li>Plot the dead from the <b>Registrar</b>.</li>
-      <li>Tap any <b>pump</b> to inspect it.</li>
-      <li>Read the <b>letters</b> as they arrive.</li>
-      <li>Convince the Board to <b>remove the handle</b> of the right pump before the week is out.</li>
+      <li>Tap places and pumps on the map to <b>investigate</b>. You have <b>two visits a day</b>.</li>
+      <li>The <b>Registrar</b> shows where the dead lived.</li>
+      <li>When you are ready, ask the Board to <b>remove a pump handle</b>. They will push back. Answer them with your evidence.</li>
+      <li>There is no clock. Take your time, then <b>end the day</b>.</li>
     </ul>
     <button class="btn red" id="start">Begin</button>
-    <div class="fine">Simplified map and timeline based on Snow's 1855 report. Stuck? Help will come.</div>
+    <div class="fine">Simplified map and timeline based on Snow's 1855 report and the parish inquiry. Stuck? Help will come.</div>
   </div>
 
   <div class="screen hide" id="end"></div>
@@ -154,46 +172,82 @@ const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.
 /* ---------- geography (simplified Soho) ---------- */
 const streets=[
   ["REGENT ST",30,0,30,480,"v"],["OXFORD ST",0,30,360,30,"h"],
-  ["GT MARLBOROUGH ST",30,105,250,105,"h"],["LT MARLBOROUGH",110,160,245,160,"h"],
+  ["GT MARLBOROUGH ST",30,105,250,105,"h"],["LT MARLBOROUGH",110,160,250,160,"h"],
   ["POLAND ST",110,30,110,250,"v"],["MARSHALL ST",170,105,170,400,"v"],
-  ["BERWICK ST",260,30,260,400,"v"],["DEAN ST",330,30,330,480,"v"],
-  ["BROAD ST",30,250,330,250,"h"],["BREWER ST",30,400,330,400,"h"],
+  ["BERWICK ST",292,30,292,400,"v"],["DEAN ST",335,30,335,480,"v"],
+  ["BROAD ST",30,250,335,250,"h"],["BREWER ST",30,400,335,400,"h"],
   ["CAMBRIDGE ST",215,250,215,400,"v"],["COVENTRY ST",30,460,360,460,"h"]
 ];
+const BX=248,BY=250; // Broad Street pump
 const pumps=[
-  {id:"broad",name:"Broad Street pump",x:205,y:250,
-   note:"The busiest pump in the parish. People walk past nearer pumps to fetch its water because it tastes cold and clean."},
-  {id:"marl",name:"Little Marlborough St pump",x:140,y:160,
-   note:"Residents complain it smells foul, so almost nobody drinks from it."},
+  {id:"broad",name:"Broad Street pump",x:BX,y:BY,
+   note:"The busiest pump in the parish. Its water is famous for being cold and clear.",
+   test:"broadTest"},
+  {id:"marl",name:"Little Marlborough St pump",x:232,y:160,
+   note:"A pump right beside the worst streets, a short walk from the old plague pit.",
+   test:"marlTest"},
   {id:"oxford",name:"Oxford Street pump",x:205,y:30,note:"A quiet pump on the northern edge of the parish."},
-  {id:"dean",name:"Dean Street pump",x:330,y:160,note:"Serves the eastern streets toward Soho Square."},
-  {id:"rupert",name:"Rupert Street pump",x:300,y:460,note:"Far to the south-east. Hard to reach from Broad Street through the narrow lanes."},
+  {id:"dean",name:"Dean Street pump",x:335,y:160,note:"Serves the eastern streets toward Soho Square."},
+  {id:"rupert",name:"Rupert Street pump",x:310,y:460,note:"Serves the homes around Rupert Street to the south-east."},
   {id:"warwick",name:"Warwick Street pump",x:60,y:430,note:"Serves the lanes by Regent Street."},
   {id:"crown",name:"Crown Chapel pump",x:30,y:185,note:"On the Regent Street side, by the chapel."}
 ];
 const places={
-  brewery:{x:222,y:226,w:34,h:18,label:"Brewery"},
-  workhouse:{x:116,y:180,w:48,h:56,label:"Workhouse"},
-  square:{x:60,y:290,w:90,h:80,label:"Golden Sq"}
+  brewery:{x:256,y:222,w:30,h:20,label:"Brewery",card:"brewery",
+    intro:"The Lion Brewery sits a few steps from the Broad Street pump."},
+  workhouse:{x:116,y:180,w:48,h:56,label:"Workhouse",card:"workhouse",
+    intro:"The Poland Street workhouse is surrounded by the stricken streets."},
+  pit:{x:176,y:176,w:34,h:30,label:"Plague pit",cls:"pit",card:"pit",
+    intro:"Ground beside Marshall Street where the victims of the 1665 plague were buried. The sewer men dug near it this summer."},
+  homes:{x:291,y:410,w:38,h:40,label:"Homes",card:"homes",
+    intro:"Houses around Rupert Street, closer to the Rupert Street pump than to Broad Street. A few deaths here too."},
+  square:{x:60,y:290,w:90,h:80}
 };
+const CARDS={
+  reg:{from:"Registrar General",t:"The dead are packed together",
+    b:"Most deaths are in a few streets north of Golden Square. The same streets hold the old plague pit, the Little Marlborough pump and the Broad Street pump."},
+  pit:{from:"Mr Cooper, Commission of Sewers",t:"The plague pit was disturbed",
+    b:"Workmen dug a sewer beside the 1665 plague burial ground this summer. The Board is sure poisonous air is rising from it. The deaths do crowd around this spot."},
+  marlTest:{from:"Your visit",t:"Little Marlborough water stinks",
+    b:"The water smells so foul that neighbours refuse to drink it. They walk to Broad Street instead."},
+  broadTest:{from:"Your microscope",t:"Broad Street water looks clean",
+    b:"Clear, cold, hardly a particle in it. Under the microscope you see nothing that could kill anyone. The Board will say this proves the water is safe."},
+  brewery:{from:"Mr Huggins, Lion Brewery",t:"Seventy men, no deaths",
+    b:"My workmen breathe the same air as everyone on Broad Street. None has died. They drink the beer we brew, and the brewery has its own well."},
+  workhouse:{from:"Master of the Workhouse",t:"535 inmates, only 5 dead",
+    b:"We sit beside the plague pit in the worst of the streets, yet very few of our people have died. The workhouse has its own well and does not use the street pumps."},
+  homes:{from:"Interviews, Rupert Street",t:"Why these families died",
+    b:"These houses are nearer other pumps. But several families say they sent for Broad Street water because they liked it better, and some of the dead were children who went to school near Broad Street."},
+  hampstead:{from:"Letter from Hampstead",t:"A widow, miles away",
+    b:"Mrs Eley moved away from Broad Street but loved its water, so a cart brought her a bottle every day. She has died of cholera. No one else in Hampstead has it. Her niece, who drank the same water on a visit, has died too."}
+};
+/* Board objections: which cards answer them */
+const OBJ=[
+  {q:"The dead crowd around the old plague pit. Everyone knows cholera comes from foul air. Why blame a pump?",ok:["workhouse","brewery"],
+   miss:"You need people who breathe that same air but did not get sick. Who lives right beside the pit or the pump?"},
+  {q:"Your own microscope found the Broad Street water clean and clear. How can clean water kill?",ok:["hampstead"],
+   miss:"Clean-looking is not the same as safe. Is there anyone far from Soho who drank that water?"},
+  {q:"Some of the dead lived closer to other pumps. Surely that breaks your theory?",ok:["homes"],
+   miss:"Go and ask the families who lived nearer other pumps where they actually got their water."}
+];
 
-/* ---------- deaths (seeded, clustered on the Broad St pump) ---------- */
+/* ---------- deaths (seeded) ---------- */
 let seed=1854;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
 const inRect=(x,y,r,pad=2)=>x>r.x-pad&&x<r.x+r.w+pad&&y>r.y-pad&&y<r.y+r.h+pad;
-const nearestPump=(x,y,list)=>{let b=null,bd=1e9;for(const p of list){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;b=p}}return b};
+const nearestPump=(x,y)=>{let b=null,bd=1e9;for(const p of pumps){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;b=p}}return b};
 const onStreet=(x,y)=>streets.some(s=>s[5]==="h"?Math.abs(y-s[2])<8&&x>=s[1]&&x<=s[3]:Math.abs(x-s[1])<8&&y>=s[2]&&y<=s[4]);
+const blocked=(x,y)=>onStreet(x,y)||inRect(x,y,places.brewery,4)||inRect(x,y,places.pit,3)||inRect(x,y,places.square,-4)||(inRect(x,y,places.workhouse)&&rnd()>.02)||pumps.some(p=>Math.hypot(p.x-x,p.y-y)<9);
 const deaths=[];
-while(deaths.length<380){
+// cluster centred between the pit and the pump, so the map alone does not settle it
+while(deaths.length<330){
   const x=rnd()*350+5,y=rnd()*470+5;
-  if(onStreet(x,y)||inRect(x,y,places.brewery,4)||inRect(x,y,places.square,-4))continue;
-  if(inRect(x,y,places.workhouse)&&rnd()>.03)continue;
-  const d=Math.hypot(x-205,y-250);
-  const p=Math.exp(-d/40)*.95+.004;
-  if(rnd()<p)deaths.push({x,y,day:0});
+  if(blocked(x,y))continue;
+  const d=Math.hypot(x-(BX-18),y-(BY-22));
+  if(rnd()<Math.exp(-d/52)*.9+.004)deaths.push({x,y});
 }
-// assign to days, weighted early (the outbreak peaked in its first days)
+let extra=0;while(extra<9){const x=places.homes.x-14+rnd()*60,y=places.homes.y-8+rnd()*54;if(blocked(x,y)||inRect(x,y,places.homes,1))continue;deaths.push({x,y});extra++}
 const dayW=[.10,.24,.22,.14,.10,.08,.06,.06];
-deaths.forEach(d=>{let r=rnd(),a=0;for(let i=0;i<dayW.length;i++){a+=dayW[i];if(r<=a){d.day=i;return}}d.day=7});
+deaths.forEach(d=>{let r=rnd(),a=0;d.day=7;for(let i=0;i<dayW.length;i++){a+=dayW[i];if(r<=a){d.day=i;break}}});
 
 /* ---------- draw ---------- */
 const gS=$("streets"),gP=$("pumps"),gD=$("deaths"),gZ=$("zones"),gPl=$("places");
@@ -201,14 +255,18 @@ el("rect",{x:places.square.x,y:places.square.y,width:places.square.w,height:plac
 streets.forEach(s=>el("line",{x1:s[1],y1:s[2],x2:s[3],y2:s[4],class:"st","stroke-width":s[0]==="BROAD ST"?13:10},gS));
 streets.forEach(s=>{
   const t=el("text",{class:"stlabel"},gS);t.textContent=s[0];
-  if(s[5]==="h"){t.setAttribute("x",s[0]==="BROAD ST"?44:s[0]==="LT MARLBOROUGH"?178:s[1]+12);t.setAttribute("y",s[2]+3)}
-  else{const cx=s[1]+3,cy=s[0]==="REGENT ST"?150:s[0]==="CAMBRIDGE ST"?395:s[2]+70;t.setAttribute("transform",`translate(${cx},${cy}) rotate(-90)`)}
+  if(s[5]==="h"){t.setAttribute("x",s[0]==="BROAD ST"?44:s[0]==="LT MARLBOROUGH"?114:s[1]+12);t.setAttribute("y",s[2]+3)}
+  else{const cx=s[1]+3,cy=s[0]==="REGENT ST"?150:s[0]==="CAMBRIDGE ST"?395:s[0]==="MARSHALL ST"?395:s[2]+70;t.setAttribute("transform",`translate(${cx},${cy}) rotate(-90)`)}
 });
-["brewery","workhouse"].forEach(k=>{const p=places[k];
-  p.node=el("rect",{x:p.x,y:p.y,width:p.w,height:p.h,rx:3,class:"place"},gPl);
-  const t=el("text",{x:p.x+p.w/2,y:p.y+p.h/2+2.5,"text-anchor":"middle",class:"plabel"},gPl);t.textContent=p.label});
 {const t=el("text",{x:105,y:334,"text-anchor":"middle",class:"stlabel"},gS);t.textContent="GOLDEN SQ"}
-
+["brewery","workhouse","pit","homes"].forEach(k=>{const p=places[k];
+  const g=el("g",{class:"placeg"},gPl);
+  el("rect",{x:p.x-8,y:p.y-8,width:p.w+16,height:p.h+16,fill:"transparent"},g);
+  p.node=el("rect",{x:p.x,y:p.y,width:p.w,height:p.h,rx:3,class:"place "+(p.cls||"")},g);
+  const lines=p.label.split(" ");
+  lines.forEach((w,i)=>{const t=el("text",{x:p.x+p.w/2,y:p.y+p.h/2+2.5+(i-(lines.length-1)/2)*8,"text-anchor":"middle",class:"plabel"},g);t.textContent=w});
+  g.addEventListener("click",e=>{e.stopPropagation();openPlace(k)});
+});
 pumps.forEach(p=>{
   const g=el("g",{class:"pump",transform:`translate(${p.x},${p.y})`},gP);
   el("circle",{r:18,class:"hit"},g);
@@ -216,160 +274,166 @@ pumps.forEach(p=>{
   el("circle",{r:6.5,class:"body"},g);
   el("rect",{x:-1.5,y:-11,width:3,height:6,fill:"var(--blue)",rx:1},g);
   p.node=g;
-  g.addEventListener("click",e=>{e.stopPropagation();selectPump(p)});
+  g.addEventListener("click",e=>{e.stopPropagation();openPump(p)});
 });
-
-// nearest-pump zones
-const zoneCol={broad:"#e6a17a",marl:"#b7c9a8",oxford:"#c4b7d6",dean:"#a9c6d6",rupert:"#d9c78c",warwick:"#c9a9b9",crown:"#a8d0c0"};
-for(let y=0;y<480;y+=10)for(let x=0;x<360;x+=10){
-  const p=nearestPump(x+5,y+5,pumps);
-  el("rect",{x,y,width:10.3,height:10.3,fill:zoneCol[p.id]},gZ);
-}
+const zoneCol={broad:"#e6a17a",marl:"#9fc3b0",oxford:"#c4b7d6",dean:"#a9c6d6",rupert:"#d9c78c",warwick:"#c9a9b9",crown:"#b8d6a0"};
+for(let y=0;y<480;y+=10)for(let x=0;x<360;x+=10)el("rect",{x,y,width:10.3,height:10.3,fill:zoneCol[nearestPump(x+5,y+5).id]},gZ);
 gZ.style.opacity=0;gZ.classList.add("zone");
 
 /* ---------- state ---------- */
-const DAY_MS=16000, DAYS=9;           // 31 Aug .. 8 Sep, ~2.4 min
+const DAYS=9, PER_DAY=2;
 const dates=["31 August","1 September","2 September","3 September","4 September","5 September","6 September","7 September","8 September"];
-const S={t0:0,day:0,toll:0,plottedDay:-1,zones:false,sel:null,letters:[],hintStep:0,lastAct:0,over:false,petitions:0,readAny:false};
-const lettersAll=[
-  {at:1,from:"Registrar General",t:"Deaths are not spread evenly",
-   b:"The weekly returns show the dead crowded into a few streets around Golden Square. Other districts of London are barely touched."},
-  {at:2,key:"brewery",from:"Mr Huggins, Lion Brewery",t:"None of my men are ill",
-   b:"Seventy men work at my brewery on Broad Street and not one has died. They are given beer to drink. We have our own well and I doubt any of them ever touch the street pump."},
-  {at:3,from:"Your own notebook",t:"The water looks clean",
-   b:"I examined water from the Broad Street pump under the microscope. It looks clearer than most in the parish. Whatever is killing people, I cannot see it. The Board will say that proves it is the air."},
-  {at:3,key:"workhouse",from:"Master of the Poland Street Workhouse",t:"535 inmates, very few deaths",
-   b:"We sit in the middle of the stricken streets, yet only a handful of our people have died. The workhouse has its own well."},
-  {at:4,from:"A letter from Hampstead",t:"A widow, miles away",
-   b:"Mrs Eley once lived on Broad Street and liked its water so much that a cart brought her a bottle every day. She died of cholera this week. Nobody else in Hampstead has it. Her niece, who visited and drank the same water, has also died."}
-];
+const S={day:0,acts:PER_DAY,plotted:-1,zones:false,sel:null,cards:[],unseen:0,over:false,petitions:0,lastAct:0,started:false,lastMiss:null};
 
 /* ---------- ui helpers ---------- */
-let toastT;const toast=m=>{const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2200)};
-let hintT;const hint=m=>{$("hinttext").textContent=m;$("hint").classList.add("show");clearTimeout(hintT);hintT=setTimeout(()=>$("hint").classList.remove("show"),7000)};
+let toastT;const toast=m=>{const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)};
+let hintT;const hint=m=>{$("hinttext").textContent=m;$("hint").classList.add("show");clearTimeout(hintT);hintT=setTimeout(()=>$("hint").classList.remove("show"),12000)};
 $("hint").onclick=()=>$("hint").classList.remove("show");
-const sheet=(html)=>{$("sheetInner").innerHTML=html;$("sheet").classList.add("show")};
+const sheet=html=>{$("sheetInner").innerHTML=html;$("sheet").classList.add("show");$("sheetInner").scrollTop=0};
 const closeSheet=()=>$("sheet").classList.remove("show");
 $("map").addEventListener("click",()=>{closeSheet();selectPump(null)});
+$("xClose").onclick=()=>{closeSheet();selectPump(null)};
+const setNav=()=>document.getElementById("app").style.setProperty("--navh",document.querySelector("nav").offsetHeight+"px");setNav();addEventListener("resize",setNav);
 const touch=()=>{S.lastAct=performance.now();$("hint").classList.remove("show")};
 const vib=n=>{try{navigator.vibrate&&navigator.vibrate(n)}catch(e){}};
+const has=id=>S.cards.includes(id);
+function selectPump(p){S.sel=p;pumps.forEach(q=>q.node.classList.toggle("sel",q===p))}
 
-function selectPump(p){
-  S.sel=p;pumps.forEach(q=>q.node.classList.toggle("sel",q===p));
-  $("bAct").disabled=!p||S.over;
-  if(!p)return;touch();
-  const nearby=S.plottedDay<0?null:deaths.filter(d=>d.day<=S.plottedDay&&nearestPump(d.x,d.y,pumps)===p).length;
-  sheet(`<h2>${p.name}</h2><p>${p.note}</p>`+
-    (nearby===null?`<p style="color:var(--muted)">Plot the dead from the Registrar to see who lived nearest this pump.</p>`
-      :`<p><b>${nearby}</b> of the plotted dead lived closer to this pump than to any other.</p>`)+
-    `<button class="btn red" id="petBtn">Petition the Board: remove this handle</button>`);
-  $("petBtn").onclick=petition;
+function render(){
+  $("date").textContent=dates[S.day]+" 1854";
+  $("status").textContent=`Day ${S.day+1} of ${DAYS}`;
+  $("bar").style.width=((S.day)/(DAYS-1)*100)+"%";
+  $("acts").innerHTML="visits "+Array.from({length:PER_DAY},(_,i)=>`<span class="dot ${i<S.acts?"":"used"}"></span>`).join("");
+  $("toll").textContent=deaths.filter(d=>d.day<=S.day).length;
+  $("regBadge").textContent=S.plotted<S.day?"!":"";
+  $("noteBadge").textContent=S.unseen||"";
+  $("bNext").querySelector(".ic").textContent=S.day===DAYS-1?"⏳":"🌙";
 }
 
-/* ---------- actions ---------- */
+function addCard(id){
+  if(has(id))return false;
+  S.cards.push(id);S.unseen++;render();return true;
+}
+function cardHTML(id,isNew){const c=CARDS[id];return `<div class="card ${isNew?"new":""}"><div class="from">${c.from}</div><div class="t">${c.t}</div><div class="body">${c.b}</div></div>`}
+function useVisit(){
+  if(S.acts<=0){toast("No visits left today. End the day.");return false}
+  S.acts--;render();return true;
+}
+
+/* ---------- places & pumps ---------- */
+function openPlace(k){
+  touch();selectPump(null);const p=places[k];
+  if(has(p.card)){sheet(`<h2>${p.label}</h2>`+cardHTML(p.card));return}
+  sheet(`<h2>${p.label}</h2><p>${p.intro}</p><button class="btn red" id="go">Investigate</button><div class="cost">Uses 1 of today's visits</div>`);
+  $("go").onclick=()=>{if(!useVisit())return;addCard(p.card);p.node.classList.add("done");vib(15);
+    sheet(`<h2>${p.label}</h2>`+cardHTML(p.card,true)+`<p class="cost">Added to your case notes.</p>`);S.unseen=Math.max(0,S.unseen-1);render()};
+}
+function openPump(p){
+  touch();selectPump(p);
+  const n=S.plotted<0?null:deaths.filter(d=>d.day<=S.plotted&&nearestPump(d.x,d.y)===p).length;
+  let h=`<h2>${p.name}</h2><p>${p.note}</p>`+
+    (n===null?`<p class="cost">Plot the dead from the Registrar to see who lived nearest.</p>`:`<p><b>${n}</b> of the plotted dead lived closer to this pump than to any other.</p>`);
+  if(p.test){h+=has(p.test)?cardHTML(p.test):`<button class="btn ghost" id="test">Examine the water</button><div class="cost">Uses 1 of today's visits</div>`}
+  h+=`<button class="btn red" id="pet">Ask the Board to remove this handle</button><div class="cost">The Board meets once a day. A failed request ends the day.</div>`;
+  sheet(h);
+  if($("test"))$("test").onclick=()=>{if(!useVisit())return;addCard(p.test);S.unseen=Math.max(0,S.unseen-1);render();openPump(p)};
+  $("pet").onclick=()=>petition(p);
+}
+
+/* ---------- nav ---------- */
 $("bReg").onclick=()=>{
   touch();closeSheet();
-  if(S.plottedDay>=S.day){toast("No new returns yet");return}
-  const from=S.plottedDay+1;S.plottedDay=S.day;
-  let n=0;
-  deaths.forEach((d,i)=>{if(d.day>=from&&d.day<=S.day){
-    setTimeout(()=>{el("rect",{x:d.x-2.2,y:d.y-.9,width:4.4,height:1.8,class:"death new"},gD)},n*12);n++}});
-  vib(20);
-  updateBadges();
-  setTimeout(()=>$("plotted").textContent=`${deaths.filter(d=>d.day<=S.plottedDay).length} plotted`,n*12);
+  if(S.plotted>=S.day){toast("No new returns until tomorrow");return}
+  const from=S.plotted+1;S.plotted=S.day;let n=0;
+  deaths.forEach(d=>{if(d.day>=from&&d.day<=S.day){setTimeout(()=>el("rect",{x:d.x-2.2,y:d.y-.9,width:4.4,height:1.8,class:"death new"},gD),n*10);n++}});
+  vib(20);if(addCard("reg"))toast("Registrar's returns added to case notes");render();
 };
-$("bZone").onclick=()=>{
-  touch();S.zones=!S.zones;$("bZone").classList.toggle("on",S.zones);gZ.style.opacity=S.zones?.55:0;
-  if(S.zones)toast("Shaded by nearest pump");
+$("bZone").onclick=()=>{touch();S.zones=!S.zones;$("bZone").classList.toggle("on",S.zones);gZ.style.opacity=S.zones?.55:0;if(S.zones)toast("Each area shaded by its nearest pump")};
+$("bNotes").onclick=()=>{
+  touch();selectPump(null);const u=S.unseen;S.unseen=0;render();
+  const list=S.cards.slice().reverse().map((id,i)=>cardHTML(id,i<u)).join("");
+  sheet(`<h2>Case notes</h2>`+(list||`<p class="cost">Nothing yet. Tap the Registrar, or a place on the map.</p>`)+
+    (S.cards.length>1?`<p class="cost">Not everything here points the same way.</p>`:""));
 };
-$("bMail").onclick=()=>{
-  touch();
-  const html=S.letters.slice().reverse().map((l,i)=>`<div class="letter ${l.read?"":"unread"}" data-i="${S.letters.indexOf(l)}"><div class="from">${l.from} · ${dates[l.at]}</div><div class="t">${l.t}</div><div class="body">${l.b}</div></div>`).join("");
-  sheet(`<h2>Letters</h2>`+(html||`<p style="color:var(--muted)">Nothing yet. Letters arrive as the week goes on.</p>`));
-  document.querySelectorAll(".letter").forEach(n=>n.onclick=()=>{
-    const l=S.letters[+n.dataset.i];n.classList.toggle("open");n.classList.remove("unread");
-    if(!l.read){l.read=true;S.readAny=true;if(l.key){places[l.key].node.classList.add("lit")}updateBadges()}
-  });
-};
-$("bAct").onclick=()=>{if(S.sel)petition()};
+$("bNext").onclick=()=>{touch();endDay()};
 
-function petition(){
-  touch();if(S.over||!S.sel)return;S.petitions++;
-  const p=S.sel;
+function endDay(msg){
+  closeSheet();selectPump(null);
+  if(S.day>=DAYS-1){lose();return}
+  const before=deaths.filter(d=>d.day<=S.day).length;
+  S.day++;S.acts=PER_DAY;
+  const added=deaths.filter(d=>d.day<=S.day).length-before;
+  if(S.day===3&&addCard("hampstead"))toast("A letter arrives from Hampstead");
+  else toast(msg||`${dates[S.day]}: ${added} more deaths reported`);
+  render();vib(10);
+}
+
+/* ---------- petition ---------- */
+function petition(p){
+  touch();if(S.over)return;S.petitions++;
+  if(S.plotted<0){sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>You come with no figures at all. Where did the dead live?</div><p class="cost">Get the Registrar's returns first. This did not cost you the day.</p>`);S.petitions--;return}
   if(p.id!=="broad"){
-    closeSheet();$("bAct").classList.add("wiggle");setTimeout(()=>$("bAct").classList.remove("wiggle"),500);
-    vib([40,40,40]);toast("The Board refuses. Half a day lost.");
-    S.t0-=DAY_MS/2;
-    hint(p.id==="marl"?"That pump smells bad, but look: almost nobody who died lived near it. Bad smell is not the same as bad water."
-      :"The Board wants to know why this pump. Where do the dead cluster?");
+    const why=p.id==="marl"?"Hardly anyone drinks from that pump. The neighbours say it stinks, and they walk to Broad Street instead.":"Few of the dead lived near that pump.";
+    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${why}</div><p>The Board refuses.</p><button class="btn red" id="ok">End the day</button>`);
+    $("ok").onclick=()=>{endDay("The Board refused. A day lost.");if(p.id==="marl")hint("A foul smell is a clue about the air, not about who drank the water. Where did the people near that pump actually get theirs?")};
     return;
   }
-  if(S.plottedDay<1){
-    closeSheet();toast("The Board wants evidence.");S.t0-=DAY_MS/3;
-    hint("The Guardians believe in bad air. Show them where the dead lived first. Tap the Registrar.");return;
-  }
-  win();
+  ask(0);
+}
+function ask(i){
+  if(i>=OBJ.length){win();return}
+  const o=OBJ[i];
+  const opts=S.cards.filter(c=>c!=="reg");
+  let h=`<h2>The Board of Guardians</h2><p class="cost">Objection ${i+1} of ${OBJ.length}</p><div class="obj"><small>The Board</small>${o.q}</div><p>Which evidence answers this?</p>`;
+  h+=opts.map(c=>`<button class="opt" data-c="${c}">${CARDS[c].t}</button>`).join("");
+  h+=`<button class="opt none" data-c="">I can't answer that yet</button>`;
+  sheet(h);
+  document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    const c=b.dataset.c;
+    if(o.ok.includes(c)){vib(15);sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>You</small>${CARDS[c].b}</div><p>The Board murmurs. That answer holds.</p><button class="btn red" id="nx">${i+1<OBJ.length?"Next objection":"Hear their decision"}</button>`);$("nx").onclick=()=>ask(i+1);return}
+    vib([40,40,40]);
+    const said=c?`That doesn't answer the objection. The Board is not persuaded.`:`Without an answer, the Board will not act today.`;
+    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${o.q}</div><p>${said}</p><button class="btn red" id="ok">End the day</button>`);
+    $("ok").onclick=()=>{endDay("The Board adjourned unconvinced.");hint(o.miss)};
+  });
 }
 
-function updateBadges(){
-  const unplot=S.day>S.plottedDay?"!":"";$("regBadge").textContent=unplot;
-  const un=S.letters.filter(l=>!l.read).length;$("mailBadge").textContent=un||"";
-}
-
-/* ---------- hints (progressive, idle-triggered) ---------- */
+/* ---------- hints (idle only; no time pressure) ---------- */
 function nextHint(){
-  if(S.plottedDay<0)return "Start with the evidence. Tap the Registrar to plot where the dead lived.";
-  if(S.day>S.plottedDay)return "New death returns are in. Tap the Registrar again.";
-  if(!S.zones)return "The marks crowd together. Tap 'Nearest pump' to see which pump each household would use.";
-  if(!S.readAny&&S.letters.length)return "You have letters. Some places do not fit the pattern, and they matter.";
-  if(!S.sel)return "Which pump sits in the middle of the black marks? Tap it.";
-  return "When you are sure, petition the Board to remove that pump's handle.";
+  if(S.plotted<0)return "Start with the evidence. Tap the Registrar to plot where the dead lived.";
+  if(S.plotted<S.day)return "New returns from the Registrar are waiting.";
+  if(!S.zones)return "Try 'Nearest pump' to see which pump each household would use.";
+  if(!has("pit"))return "The Board talks of nothing but the old plague pit. Visit it so you know their case.";
+  if(S.acts>0&&!has("workhouse")&&!has("brewery"))return "If it were the air, everyone breathing it would suffer. Is anyone near the pit or the pump spared?";
+  if(S.acts>0&&!has("marlTest"))return "The Little Marlborough pump sits right by the pit. Is anyone drinking from it?";
+  if(S.acts>0&&!has("homes"))return "Some of the dead lived closer to other pumps. Their families might explain that.";
+  if(S.acts===0)return "You have used today's visits. End the day when you are ready.";
+  if(!has("hampstead"))return "The post may bring news from outside Soho. End the day to see.";
+  return "You may have enough to face the Board. Choose a pump and make your case.";
 }
+setInterval(()=>{if(S.started&&!S.over&&performance.now()-S.lastAct>22000){hint(nextHint());S.lastAct=performance.now()}},1000);
 
-/* ---------- loop ---------- */
-function tick(now){
-  if(S.over)return;
-  const el_=now-S.t0, dayF=el_/DAY_MS, day=Math.min(DAYS-1,Math.floor(dayF));
-  if(day!==S.day){S.day=day;$("date").textContent=dates[day]+" 1854";vib(10);
-    lettersAll.forEach(l=>{if(l.at===day&&!l.sent){l.sent=true;S.letters.push({...l,read:false});toast("✉️ A letter has arrived")}});
-    updateBadges();
-  }
-  // toll rises continuously
-  const target=deaths.filter(d=>d.day<=day).length;
-  if(S.toll<target&&(now|0)%3===0){S.toll++;$("toll").textContent=S.toll}
-  $("bar").style.width=Math.min(100,dayF/DAYS*100)+"%";
-  const left=Math.max(0,DAYS-dayF);$("status").textContent=left<2?"The Board meets for the last time":`${Math.ceil(left)} days before the Board adjourns`;
-  if(now-S.lastAct>11000){hint(nextHint());S.lastAct=now}
-  if(dayF>=DAYS){lose();return}
-  requestAnimationFrame(tick);
-}
-
-function start(){
-  $("intro").classList.add("hide");
-  S.t0=performance.now();S.lastAct=S.t0-6000;updateBadges();
-  requestAnimationFrame(tick);
-}
-$("start").onclick=start;
+$("start").onclick=()=>{$("intro").classList.add("hide");S.started=true;S.lastAct=performance.now()-12000;render()};
+render();
 
 function win(){
   S.over=true;closeSheet();vib([30,60,120]);
-  S.sel.node.classList.add("gone");
-  const secs=Math.round((performance.now()-S.t0)/1000);
+  const p=pumps[0];p.node.classList.add("gone");
   setTimeout(()=>{
     const e=$("end");e.classList.remove("hide");
     e.innerHTML=`<div class="handle">🔧</div><div class="kicker">${dates[S.day]} 1854</div>
     <h1>The handle comes off.</h1>
-    <p>You traced the deaths to the Broad Street pump in ${secs} seconds${S.petitions>1?`, after ${S.petitions-1} wrong petition${S.petitions>2?"s":""}`:""}.</p>
-    <p style="font-size:14px;color:#bfae8e">The real Board removed it on 8 September 1854. A baby's soiled nappies, rinsed into a cesspool beside the well at 40 Broad Street, had likely started it all.</p>
+    <p>You answered the Board on day ${S.day+1}${S.petitions>1?`, after ${S.petitions-1} failed attempt${S.petitions>2?"s":""}`:""}.</p>
+    <p style="font-size:14px;color:#bfae8e">The real Board removed it on 8 September 1854, though deaths were already falling. Most of the Board still believed in bad air. Later, Rev. Whitehead traced the likely source: a baby's soiled nappies rinsed into a cesspool beside the well at 40 Broad Street.</p>
     <button class="btn red" onclick="location.reload()">Play again</button>`;
-  },700);
+  },600);
 }
 function lose(){
-  S.over=true;closeSheet();$("bAct").disabled=true;
+  S.over=true;closeSheet();
   const e=$("end");e.classList.remove("hide");
   e.innerHTML=`<div class="kicker">8 September 1854</div><h1>The Board adjourned.</h1>
   <p>The Guardians went home still blaming the air, and the pump kept pouring.</p>
-  <p style="font-size:14px;color:#bfae8e">Try again. Plot the dead, shade the map, and read what the brewery and the workhouse have to say.</p>
+  <p style="font-size:14px;color:#bfae8e">Try again. The Board will raise three objections. Each one needs a different piece of evidence.</p>
   <button class="btn red" onclick="location.reload()">Try again</button>`;
 }
 })();
