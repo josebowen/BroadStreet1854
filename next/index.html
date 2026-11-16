@@ -340,6 +340,38 @@ function addCard(id){
   S.cards.push(id);S.unseen++;render();return true;
 }
 function cardHTML(id,isNew){const c=CARDS[id],t=S.trail.find(x=>x.id===id);return `<div class="card ${isNew?"new":""}"><div class="from">${c.from}</div><div class="t">${c.t}</div><div class="body">${c.b}</div>${t?`<div class="tagline">You said: points to <b>${TAGS[t.tag].toLowerCase()}</b>. After it: ${BEL[t.belief].toLowerCase()}.</div>`:""}</div>`}
+// Effort report: time on open decisions plus optional work. A proxy for effort, not a measure of learning.
+// EF.watch(fn): fn returns the label of the decision now open, or null. EF.extra(label): one piece of optional work.
+const EF = (() => {
+  const items = [], opt = {}; let cur = null, fn = null, last = Date.now(), act = Date.now(), seen = new Set();
+  const tick = () => {
+    const n = Date.now(); let lab = null; try { lab = fn ? fn() : null; } catch (e) { }
+    if (cur && lab !== cur.label) cur = null;
+    if (lab && !cur) { cur = items.find((i) => i.label === lab); if (!cur) { cur = { label: lab, ms: 0, rev: 0 }; items.push(cur); } seen = new Set(); }
+    if (cur && !document.hidden && n - act < 90000) cur.ms += Math.min(n - last, 2000);
+    last = n;
+  };
+  setInterval(tick, 400);
+  ['pointerdown', 'keydown', 'input'].forEach((e) => addEventListener(e, () => { act = Date.now(); }, true));
+  addEventListener('click', (e) => {
+    const t = e.target.closest && e.target.closest('input[type=radio],label,.pick,.pred,.chip,.pick button,.opt'); if (!t) return; tick(); if (!cur) return;
+    const i = t.matches('label') ? t.querySelector('input') : t; if (!i) return;
+    const k = i.name || i.dataset.k || (i.parentElement && (i.parentElement.id || i.parentElement.getAttribute('aria-label'))) || 'x';
+    if (seen.has(k)) cur.rev++; else seen.add(k);
+  }, true);
+  const mmss = (ms) => { const s = Math.round(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + ' min ' : '') + (s % 60) + ' s'; };
+  const sum = () => { tick(); const d = items.filter((i) => i.ms > 400), tot = d.reduce((a, i) => a + i.ms, 0), top = d.slice().sort((a, b) => b.ms - a.ms)[0], rev = d.reduce((a, i) => a + i.rev, 0), ex = Object.entries(opt); return { d, tot, top, rev, ex }; };
+  return {
+    watch(f) { fn = f; }, extra(k) { opt[k] = (opt[k] || 0) + 1; }, tick, items, opt,
+    html() {
+      const { d, tot, top, rev, ex } = sum(); if (!d.length) return '';
+      return `<h3>Effort</h3><p class="small ef">Time on decisions: <b>${mmss(tot)}</b> across ${d.length} ${d.length === 1 ? "decision" : "decisions"}. ${top ? `Longest: ${top.label} (${mmss(top.ms)}). ` : ''}Answers changed before committing: ${rev}. Optional work: ${ex.length ? ex.map(([k, n]) => `${k}${n > 1 ? ' ×' + n : ''}`).join(', ') : 'none'}.</p><p class="small ef hint">The clock runs only while a decision is open and you are active. Time is a rough stand-in for effort. It is not a measure of learning, and it is not scored.</p>`;
+    },
+    text() { const { d, tot, top, rev, ex } = sum(); return `Effort: ${mmss(tot)} on ${d.length} decisions${top ? `; longest ${top.label} (${mmss(top.ms)})` : ''}; answers changed before committing ${rev}; optional work: ${ex.length ? ex.map(([k, n]) => k + (n > 1 ? ' x' + n : '')).join(', ') : 'none'}`; },
+  };
+})();
+
+EF.watch(()=>{if(!S.started)return $('intro').classList.contains('hide')?null:'Opening guess';if(S.over)return $('rate')?'Rating your own reasoning':null;if(!$('sheet').classList.contains('show'))return null;if(S.tagging)return 'Clue: '+CARDS[S.tagId].t;if(document.querySelector('#sheetInner .opt'))return 'The Board, objection '+((S.objI||0)+1);return null});
 const TAGS={air:"Foul air",water:"The water",neither:"Neither yet"};
 const BEL=["","Surely air","Leaning air","Unsure","Leaning water","Surely water"];
 /* how Snow's own account reads each clue */
@@ -359,7 +391,7 @@ function drawTrail(){
   pts.forEach((b,i)=>el("circle",{cx:X(i),cy:Y(b),r:3,fill:b>3?"var(--blue)":b<3?"var(--red)":"var(--muted)"},g));
 }
 function tagSheet(id,after){
-  S.tagging=true;$("xClose").style.display="none";
+  S.tagging=true;S.tagId=id;$("xClose").style.display="none";
   $("sheetInner").innerHTML=`<h2>What do you make of it?</h2>`+cardHTML(id,true)+`<p class="ask">This clue points to:</p><div class="pick three" id="tg">${Object.keys(TAGS).map(k=>`<button data-v="${k}">${TAGS[k]}</button>`).join("")}</div><div id="tg2"></div>`;
   $("sheet").classList.add("show");$("sheetInner").scrollTop=0;
   let tag=null;
@@ -404,7 +436,7 @@ $("bReg").onclick=()=>{
   vib(20);if(addCard("reg")){S.unseen=Math.max(0,S.unseen-1);setTimeout(()=>tagSheet("reg"),1400)}render();
 };
 $("bZone").onclick=()=>{touch();S.zones=!S.zones;$("bZone").classList.toggle("on",S.zones);gZ.style.opacity=S.zones?.55:0;if(S.zones)toast("Each area shaded by its nearest pump")};
-$("bNotes").onclick=()=>{
+$("bNotes").onclick=()=>{if(S.started)EF.extra('Reread the case notes');
   touch();selectPump(null);const u=S.unseen;S.unseen=0;render();
   const list=S.cards.slice().reverse().map((id,i)=>cardHTML(id,i<u)).join("");
   sheet(`<h2>Case notes</h2>`+(list||`<p class="cost">Nothing yet. Tap the Registrar, or a place on the map.</p>`)+
@@ -438,7 +470,7 @@ function petition(p){
 function shuf(a,k){const r=a.map((x,i)=>[x,(Math.sin((i+1)*12.9898+k*78.233)*43758.5453)%1]);return r.sort((p,q)=>p[1]-q[1]).map(x=>x[0])}
 function ask(i){
   if(i>=OBJ.length){win();return}
-  const o=OBJ[i];
+  const o=OBJ[i];S.objI=i;
   const opts=S.cards.filter(c=>c!=="reg");
   let h=`<h2>The Board of Guardians</h2><p class="cost">Objection ${i+1} of ${OBJ.length}</p><div class="obj"><small>The Board</small>${o.q}</div><p>Which of your clues answers this?</p>`;
   h+=opts.map(c=>`<button class="opt" data-c="${c}">${CARDS[c].from}</button>`).join("");
@@ -487,7 +519,7 @@ $("aboutBtn").onclick=()=>{const a=$("about");a.classList.remove("hide");a.inner
 <p class="small">A five minute simulation for a public health, statistics, history or research methods course. One objective: weigh evidence that points two ways and say why a clue supports or weakens an explanation.</p>
 <h3>What is real</h3><p class="small">The outbreak, the Broad Street pump, the brewery and the workhouse that were spared, the widow in Hampstead, the families who sent for Broad Street water, and the removal of the handle on 8 September 1854 are from Snow's own account. Sources give 535 or 530 workhouse inmates.</p>
 <h3>What is simplified</h3><p class="small">The map is a sketch, not Snow's map. The deaths on it are generated, about 340 where Snow counted more than 500. The nine days, two visits a day and the three objections are game rules. The speakers' words are written for this demo and are not quotations. The plague pit as the Board's main argument is compressed from the miasma debate of the time.</p>
-<h3>How your thinking is recorded</h3><p class="small">Your first guess, what you say each clue points to, where you stand after it, and the reasons you give the Board are kept on this page and shown back to you at the end. Nothing is sent anywhere. The reference reading follows Snow's account. It is one reading, not a grade.</p>
+<h3>How your thinking is recorded</h3><p class="small">Your first guess, what you say each clue points to, where you stand after it, and the reasons you give the Board are kept on this page and shown back to you at the end. The debrief also reports how long you spent on open decisions and any optional work. Nothing is sent anywhere. The reference reading follows Snow's account. It is one reading, not a grade.</p>
 ${SOURCES}<p class="small">Built with Claude for José Antonio Bowen, weteachwithai.com, as a workshop demo. No tracking.</p>
 <button class="btn red" id="aboutX">Close</button>`;$("aboutX").onclick=()=>a.classList.add("hide")};
 render();
@@ -501,8 +533,8 @@ function debrief(){
   const never=Object.keys(CARDS).filter(c=>!has(c)).map(c=>CARDS[c].t);
   const bd=S.board.filter(b=>b.obj!=null).map(b=>`<tr><td>Objection ${b.obj+1}</td><td>${b.card?CARDS[b.card].from:"No answer"}${b.why?`<br><span class="small">${b.why}</span>`:""}</td><td>${b.ok?"Held":"Did not hold"}</td></tr>`).join("");
   const wrongPump=S.board.filter(b=>b.pump).map(b=>b.pump);
-  const txt=["Broad Street 1854: reasoning summary",`First guess: ${GP[g.pick]}, ${GC[g.conf]}`,...S.trail.map((t,n)=>`${n+1}. ${CARDS[t.id].t} (day ${t.day+1}): said ${TAGS[t.tag]}; ${BEL[t.from]} to ${BEL[t.belief]}`),...S.board.filter(b=>b.obj!=null).map(b=>`Objection ${b.obj+1}: ${b.card?CARDS[b.card].from:"no answer"}${b.why?" because "+b.why:""} (${b.ok?"held":"did not hold"})`),`Hints asked: ${S.hints}`].join("\n");
-  return `<h3>Your thinking</h3>
+  const txt=["Broad Street 1854: reasoning summary",`First guess: ${GP[g.pick]}, ${GC[g.conf]}`,...S.trail.map((t,n)=>`${n+1}. ${CARDS[t.id].t} (day ${t.day+1}): said ${TAGS[t.tag]}; ${BEL[t.from]} to ${BEL[t.belief]}`),...S.board.filter(b=>b.obj!=null).map(b=>`Objection ${b.obj+1}: ${b.card?CARDS[b.card].from:"no answer"}${b.why?" because "+b.why:""} (${b.ok?"held":"did not hold"})`),`Hints asked: ${S.hints}`,EF.text()].join("\n");
+  return EF.html()+`<h3>Your thinking</h3>
   <p class="small">You began with <b>${GP[g.pick]}</b>, ${GC[g.conf]}. You ended at <b>${BEL[S.belief].toLowerCase()}</b>. ${moved.length} of ${S.trail.length} clues moved you.${big&&big.belief!==big.from?` The largest move came after "${CARDS[big.id].t}".`:""} You asked Whitehead ${S.hints} time${S.hints===1?"":"s"}.</p>
   ${rows?`<table class="deb"><tr><th>Clue, in your order</th><th>You said</th><th>Snow's reading</th></tr>${rows}</table><p class="small">Your reading matched Snow's on ${same} of ${S.trail.length}. * marks a difference. A difference is worth discussing. It is not a wrong answer.</p>`:""}
   ${never.length?`<p class="small">Clues you did not collect: ${never.join(", ")}.</p>`:""}
