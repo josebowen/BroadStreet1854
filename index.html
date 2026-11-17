@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Broad Street, 1854</title>
-<meta name="description" content="A three-minute simulation: find the source of the 1854 Soho cholera outbreak.">
+<meta name="description" content="A five minute simulation: weigh the evidence in the 1854 Soho cholera outbreak.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -111,6 +111,22 @@ nav button.next{background:var(--ink);color:var(--paper)}
 .opt.none{font-weight:400;color:var(--muted)}
 #xClose{position:absolute;right:10px;top:6px;border:0;background:transparent;font-size:26px;line-height:1;color:var(--ink2);padding:4px 8px}
 .cost{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+.screen.long{justify-content:flex-start;overflow:auto;padding:22px 20px 30px}
+.screen.long h1{font-size:32px}
+.pick{display:grid;gap:6px;margin:8px 0}.pick.three{grid-template-columns:repeat(3,1fr)}.pick.five{grid-template-columns:repeat(5,1fr)}
+.pick button{border:1px solid rgba(43,33,24,.3);background:#fbf5e6;border-radius:10px;padding:10px 4px;font:600 13px Inter,system-ui,sans-serif;color:var(--ink);min-height:44px}
+.pick button.sel{background:var(--ink);color:var(--paper)}
+.screen .pick button{background:transparent;color:var(--paper);border-color:rgba(243,233,210,.4)}
+.screen .pick button.sel{background:var(--gold);color:#1c1510;border-color:var(--gold)}
+.ask{font-weight:700;margin-top:12px!important}
+#trailrow{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+#trailrow svg{flex:1;height:30px}
+#hintBtn{border:1px solid rgba(43,33,24,.3);background:transparent;border-radius:14px;font:600 11px Inter,system-ui,sans-serif;color:var(--ink2);padding:4px 9px}
+.tagline{font-size:12px;color:var(--ink2);margin-top:6px;border-top:1px dashed rgba(43,33,24,.25);padding-top:5px}
+.deb{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}.deb td,.deb th{border-bottom:1px solid rgba(243,233,210,.18);padding:6px 4px;text-align:left;vertical-align:top;color:#e9dcc0}.deb th{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.screen h3{font-family:"IM Fell English",serif;font-weight:400;font-size:22px;margin:16px 0 2px;color:var(--paper)}
+.screen .small{font-size:13px;color:#bfae8e}.screen a{color:var(--gold)}
+.screen .btn.ghost{color:var(--paper);border-color:rgba(243,233,210,.4)}
 </style>
 </head>
 <body>
@@ -122,6 +138,7 @@ nav button.next{background:var(--ink);color:var(--paper)}
     </div>
     <div class="bar"><i id="bar"></i></div>
     <div class="sub"><span class="acts" id="acts"></span><span id="status">Day 1 of 9</span></div>
+    <div id="trailrow"><span>Your thinking</span><svg id="trail" viewBox="0 0 200 30" preserveAspectRatio="none" aria-label="Your belief after each clue, from air at the bottom to water at the top"></svg><button id="hintBtn">Ask Whitehead</button></div>
   </header>
 
   <div id="mapwrap">
@@ -149,17 +166,23 @@ nav button.next{background:var(--ink);color:var(--paper)}
   <div class="screen" id="intro">
     <div class="kicker">A simulation · about five minutes</div>
     <h1>Broad Street, 1854</h1>
-    <p>Cholera is killing Soho. The Board of Guardians blames the foul air. You are Dr. John Snow, and you suspect the water. The evidence will not all point the same way.</p>
+    <p>Cholera is killing Soho. You are Dr. John Snow. The Board of Guardians will act only on evidence. The evidence will not all point the same way.</p>
     <ul>
       <li>Tap places and pumps on the map to <b>investigate</b>. You have <b>two visits a day</b>.</li>
       <li>The <b>Registrar</b> shows where the dead lived.</li>
-      <li>When you are ready, ask the Board to <b>remove a pump handle</b>. They will push back. Answer them with your evidence.</li>
-      <li>Advance to the <b>next day</b> when you are ready.</li>
+      <li>After each clue, <b>say what it points to</b> and where you now stand.</li>
+      <li>When you are ready, ask the Board to <b>remove a pump handle</b>. They will push back. Answer with a clue and a reason.</li>
     </ul>
-    <button class="btn red" id="start">Begin</button>
+    <p class="ask">Before you look at anything: what is spreading the cholera?</p>
+    <div class="pick three" id="gPick"><button data-v="air">Foul air</button><button data-v="water">The water</button><button data-v="other">Something else</button></div>
+    <p class="ask">How sure are you?</p>
+    <div class="pick three" id="gConf"><button data-v="low">Not very</button><button data-v="med">Fairly</button><button data-v="high">Very</button></div>
+    <button class="btn red" id="start" disabled style="opacity:.45">Begin</button>
+    <button class="btn ghost" id="aboutBtn">About and sources</button>
   </div>
 
-  <div class="screen hide" id="end"></div>
+  <div class="screen long hide" id="end"></div>
+  <div class="screen long hide" id="about"></div>
 </div>
 
 <script>
@@ -215,7 +238,7 @@ const CARDS={
     b:"My workmen breathe the same air as everyone on Broad Street. None has died. They drink the beer we brew, and the brewery has its own well."},
   workhouse:{from:"Master of the Workhouse",t:"535 inmates, only 5 dead",
     b:"We sit beside the plague pit in the worst of the streets, yet very few of our people have died. The workhouse has its own well and does not use the street pumps."},
-  homes:{from:"Interviews, Rupert Street",t:"Why these families died",
+  homes:{from:"Interviews, Rupert Street",t:"The Rupert Street families",
     b:"These houses are nearer other pumps. But several families say they sent for Broad Street water because they liked it better, and some of the dead were children who went to school near Broad Street."},
   hampstead:{from:"Letter from Hampstead",t:"A widow, miles away",
     b:"Mrs Eley moved away from Broad Street but loved its water, so a cart brought her a bottle every day. She has died of cholera. No one else in Hampstead has it. Her niece, who drank the same water on a visit, has died too."}
@@ -223,11 +246,14 @@ const CARDS={
 /* Board objections: which cards answer them */
 const OBJ=[
   {q:"The dead crowd around the old plague pit. Everyone knows cholera comes from foul air. Why blame a pump?",ok:["workhouse","brewery"],
-   miss:"You need people who breathe that same air but did not get sick. Who lives right beside the pit or the pump?"},
+   miss:"If the air were the cause, who else ought to be dying?",
+   why:["They breathed the same air and lived. Their water came from elsewhere.","They lived farther from the pit, so less of the bad air reached them.","They were better fed and stronger than their neighbours on the street."]},
   {q:"Your own microscope found the Broad Street water clean and clear. How can clean water kill?",ok:["hampstead"],
-   miss:"Clean-looking is not the same as safe. Is there anyone far from Soho who drank that water?"},
+   miss:"Can you separate this water from the air of Soho?",
+   why:["She breathed different air, miles away, and drank this same water.","The water had turned foul and cloudy by the time it reached her.","She had walked through Broad Street in the week before she died."]},
   {q:"Some of the dead lived closer to other pumps. Surely that breaks your theory?",ok:["homes"],
-   miss:"Go and ask the families who lived nearer other pumps where they actually got their water."}
+   miss:"Is the nearest pump always the pump a family uses?",
+   why:["Where a family lives is not always where that family gets its water.","Their own nearer pumps must have been poisoned in the same way.","The bad air drifted south that week and reached their houses too."]}
 ];
 
 /* ---------- deaths (seeded) ---------- */
@@ -282,14 +308,14 @@ gZ.style.opacity=0;gZ.classList.add("zone");
 /* ---------- state ---------- */
 const DAYS=9, PER_DAY=2;
 const dates=["31 August","1 September","2 September","3 September","4 September","5 September","6 September","7 September","8 September"];
-const S={day:0,acts:PER_DAY,plotted:-1,zones:false,sel:null,cards:[],unseen:0,over:false,petitions:0,lastAct:0,started:false,lastMiss:null};
+const S={day:0,acts:PER_DAY,plotted:-1,zones:false,sel:null,cards:[],unseen:0,over:false,petitions:0,lastAct:0,started:false,lastMiss:null,guess:{},belief:3,trail:[],board:[],hints:0,hintKey:null,tagging:false,rate:null};
 
 /* ---------- ui helpers ---------- */
 let toastT;const toast=m=>{const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)};
 let hintT;const hint=m=>{$("hinttext").textContent=m;$("hint").classList.add("show");clearTimeout(hintT);hintT=setTimeout(()=>$("hint").classList.remove("show"),12000)};
 $("hint").onclick=()=>$("hint").classList.remove("show");
 const sheet=html=>{$("sheetInner").innerHTML=html;$("sheet").classList.add("show");$("sheetInner").scrollTop=0};
-const closeSheet=()=>$("sheet").classList.remove("show");
+const closeSheet=()=>{if(S.tagging)return;$("sheet").classList.remove("show")};
 $("map").addEventListener("click",()=>{closeSheet();selectPump(null)});
 $("xClose").onclick=()=>{closeSheet();selectPump(null)};
 const setNav=()=>document.getElementById("app").style.setProperty("--navh",document.querySelector("nav").offsetHeight+"px");setNav();addEventListener("resize",setNav);
@@ -313,7 +339,91 @@ function addCard(id){
   if(has(id))return false;
   S.cards.push(id);S.unseen++;render();return true;
 }
-function cardHTML(id,isNew){const c=CARDS[id];return `<div class="card ${isNew?"new":""}"><div class="from">${c.from}</div><div class="t">${c.t}</div><div class="body">${c.b}</div></div>`}
+function cardHTML(id,isNew){const c=CARDS[id],t=S.trail.find(x=>x.id===id);return `<div class="card ${isNew?"new":""}"><div class="from">${c.from}</div><div class="t">${c.t}</div><div class="body">${c.b}</div>${t?`<div class="tagline">You said: points to <b>${TAGS[t.tag].toLowerCase()}</b>. After it: ${BEL[t.belief].toLowerCase()}.</div>`:""}</div>`}
+// Effort report: time on open decisions, time spent working after a wrong answer, time against
+// confidence and correctness, and optional work. A very rough stand-in for effort, not a measure of learning.
+// EF.watch(fn): fn returns the label of the decision now open, or null.
+// EF.mark({ ok, conf }): how the decision just committed turned out (conf 0 guessing, 1 fairly sure, 2 very sure).
+// EF.wrong(): a wrong answer was just shown. EF.resolved(): the player has answered again or moved on.
+// EF.extra(label): one piece of optional work or a voluntary return to the evidence.
+const EF = (() => {
+  const items = [], opt = {}, CONF = ['Guessing', 'Fairly sure', 'Very sure'];
+  let cur = null, prev = null, fn = null, last = Date.now(), act = Date.now(), seen = new Set(), aw = null; const after = [];
+  const live = (n) => !document.hidden && n - act < 90000;
+  const tick = () => {
+    const n = Date.now(); let lab = null; try { lab = fn ? fn() : null; } catch (e) { }
+    if (cur && lab !== cur.label) { prev = cur; cur = null; }
+    if (lab && !cur) { cur = items.find((i) => i.label === lab); if (!cur) { cur = { label: lab, ms: 0, rev: 0 }; items.push(cur); } seen = new Set(); }
+    const d = Math.min(n - last, 2000);
+    if (cur && live(n)) cur.ms += d;
+    if (aw && live(n)) aw.ms += d;
+    last = n;
+  };
+  setInterval(tick, 400);
+  ['pointerdown', 'keydown', 'input'].forEach((e) => addEventListener(e, () => { act = Date.now(); }, true));
+  addEventListener('click', (e) => {
+    const t = e.target.closest && e.target.closest('input[type=radio],label,.pick,.pred,.chip,.pick button,.opt'); if (!t) return; tick(); if (!cur) return;
+    const i = t.matches('label') ? t.querySelector('input') : t; if (!i) return;
+    const k = i.name || i.dataset.k || (i.parentElement && (i.parentElement.id || i.parentElement.getAttribute('aria-label'))) || 'x';
+    if (seen.has(k)) cur.rev++; else seen.add(k);
+  }, true);
+  const mmss = (ms) => { const s = Math.round(ms / 1000); return (s >= 60 ? Math.floor(s / 60) + ' min ' : '') + (s % 60) + ' s'; };
+  const avg = (a) => (a.length ? mmss(a.reduce((x, i) => x + i.ms, 0) / a.length) : '');
+  const sum = () => {
+    tick(); const d = items.filter((i) => i.ms > 400), tot = d.reduce((a, i) => a + i.ms, 0), top = d.slice().sort((a, b) => b.ms - a.ms)[0], rev = d.reduce((a, i) => a + i.rev, 0), ex = Object.entries(opt);
+    const m = items.filter((i) => i.ok !== undefined), right = m.filter((i) => i.ok), wrong = m.filter((i) => !i.ok);
+    const byC = CONF.map((c, k) => { const g = m.filter((i) => i.conf === k); return g.length ? `${c}: ${g.filter((i) => i.ok).length} of ${g.length} right, about ${avg(g)} each` : ''; }).filter(Boolean);
+    const aft = after.filter((a) => a.ms > 300);
+    return { d, tot, top, rev, ex, right, wrong, byC, aft };
+  };
+  const lines = () => {
+    const { d, tot, top, rev, ex, right, wrong, byC, aft } = sum(); if (!d.length) return [];
+    const L = [`Time on decisions: ${mmss(tot)} across ${d.length} ${d.length === 1 ? 'decision' : 'decisions'}.${top ? ` Longest: ${top.label} (${mmss(top.ms)}).` : ''}`];
+    if (aft.length) L.push(`After a wrong answer you kept working ${aft.length} ${aft.length === 1 ? 'time' : 'times'}, for ${mmss(aft.reduce((a, i) => a + i.ms, 0))} in all, before answering again or moving on.`);
+    if (right.length && wrong.length) L.push(`Decisions you got right took about ${avg(right)} each. Decisions you got wrong took about ${avg(wrong)} each.`);
+    if (byC.length) L.push(`Time against confidence. ${byC.join('. ')}.`);
+    L.push(`Answers changed before committing: ${rev}. Optional work and returns to the evidence: ${ex.length ? ex.map(([k, n]) => `${k}${n > 1 ? ' ×' + n : ''}`).join(', ') : 'none'}.`);
+    return L;
+  };
+  return {
+    watch(f) { fn = f; }, extra(k) { opt[k] = (opt[k] || 0) + 1; }, tick, items, opt, after,
+    mark(o) { tick(); const it = cur || prev; if (it && it.ok === undefined) Object.assign(it, o); },
+    wrong() { tick(); if (!aw) { aw = { ms: 0 }; after.push(aw); } }, resolved() { tick(); aw = null; },
+    html() { const L = lines(); return L.length ? `<h3>Effort</h3>${L.map((l) => `<p class="small ef">${l.replace(/^([^:.]{3,40}:)/, '<b>$1</b>')}</p>`).join('')}<p class="small ef hint">The clock runs only while a decision is open and you are active. Time is a very rough stand-in for effort. It is not a measure of learning, and it is not scored.</p>` : ''; },
+    text() { const L = lines(); return L.length ? 'Effort (a very rough stand-in). ' + L.join(' ') : ''; },
+  };
+})();
+EF.watch(()=>{if(!S.started)return $('intro').classList.contains('hide')?null:'Opening guess';if(S.over)return $('rate')?'Rating your own reasoning':null;if(!$('sheet').classList.contains('show'))return null;if(S.tagging)return 'Clue: '+CARDS[S.tagId].t;if(document.querySelector('#sheetInner .opt'))return 'The Board, objection '+((S.objI||0)+1);return null});
+const TAGS={air:"Foul air",water:"The water",neither:"Neither yet"};
+const BEL=["","Surely air","Leaning air","Unsure","Leaning water","Surely water"];
+/* how Snow's own account reads each clue */
+const REF={reg:["neither","The map fits both ideas. The pit and the pump share the same streets."],
+  pit:["air","This is the Board's case. It is also what the map alone would suggest."],
+  marlTest:["neither","A bad smell says nothing about who drank. It does say the neighbours went to Broad Street."],
+  broadTest:["neither","Clear water was no proof of safety in 1854. Nothing known could be seen in it."],
+  brewery:["water","Same air, no deaths, a different source of drink."],
+  workhouse:["water","Same air, few deaths, its own well."],
+  homes:["water","Deaths far from the pump trace back to its water."],
+  hampstead:["water","Different air, the same water, and she died."]};
+function drawTrail(){
+  const g=$("trail");g.innerHTML="";const pts=[S.guess.b||3,...S.trail.map(t=>t.belief)];
+  el("line",{x1:0,y1:15,x2:200,y2:15,stroke:"rgba(43,33,24,.2)","stroke-dasharray":"2 3"},g);
+  const X=i=>8+i*(184/Math.max(8,pts.length-1)),Y=b=>27-(b-1)*6;
+  if(pts.length>1)el("polyline",{points:pts.map((b,i)=>X(i)+","+Y(b)).join(" "),fill:"none",stroke:"var(--ink2)","stroke-width":1.2},g);
+  pts.forEach((b,i)=>el("circle",{cx:X(i),cy:Y(b),r:3,fill:b>3?"var(--blue)":b<3?"var(--red)":"var(--muted)"},g));
+}
+function tagSheet(id,after){
+  S.tagging=true;S.tagId=id;$("xClose").style.display="none";
+  $("sheetInner").innerHTML=`<h2>What do you make of it?</h2>`+cardHTML(id,true)+`<p class="ask">This clue points to:</p><div class="pick three" id="tg">${Object.keys(TAGS).map(k=>`<button data-v="${k}">${TAGS[k]}</button>`).join("")}</div><div id="tg2"></div>`;
+  $("sheet").classList.add("show");$("sheetInner").scrollTop=0;
+  let tag=null;
+  $("tg").querySelectorAll("button").forEach(b=>b.onclick=()=>{tag=b.dataset.v;$("tg").querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));
+    $("tg2").innerHTML=`<p class="ask">Where do you stand now?</p><div class="pick five" id="bl">${[1,2,3,4,5].map(n=>`<button data-v="${n}" class="${n===S.belief?"sel":""}">${BEL[n]}</button>`).join("")}</div><p class="cost">Highlighted: where you stood before this clue.</p>`;
+    $("sheetInner").scrollTop=9999;
+    $("bl").querySelectorAll("button").forEach(c=>c.onclick=()=>{const nb=+c.dataset.v;
+      S.trail.push({id,day:S.day,tag,belief:nb,from:S.belief});S.belief=nb;S.tagging=false;$("xClose").style.display="";drawTrail();vib(10);
+      closeSheet();if(after)after()})});
+}
 function useVisit(){
   if(S.acts<=0){toast("No visits left today. Tap Next Day.");return false}
   S.acts--;render();return true;
@@ -325,7 +435,7 @@ function openPlace(k){
   if(has(p.card)){sheet(`<h2>${p.label}</h2>`+cardHTML(p.card));return}
   sheet(`<h2>${p.label}</h2><p>${p.intro}</p><button class="btn red" id="go">Investigate</button><div class="cost">Uses 1 of today's visits</div>`);
   $("go").onclick=()=>{if(!useVisit())return;addCard(p.card);p.node.classList.add("done");vib(15);
-    sheet(`<h2>${p.label}</h2>`+cardHTML(p.card,true)+`<p class="cost">Added to your case notes.</p>`);S.unseen=Math.max(0,S.unseen-1);render()};
+    S.unseen=Math.max(0,S.unseen-1);render();tagSheet(p.card)};
 }
 function openPump(p){
   touch();selectPump(p);
@@ -335,7 +445,7 @@ function openPump(p){
   if(p.test){h+=has(p.test)?cardHTML(p.test):`<button class="btn ghost" id="test">Examine the water</button><div class="cost">Uses 1 of today's visits</div>`}
   h+=`<button class="btn red" id="pet">Ask the Board to remove this handle</button><div class="cost">The Board meets once a day. A failed request moves you to the next day.</div>`;
   sheet(h);
-  if($("test"))$("test").onclick=()=>{if(!useVisit())return;addCard(p.test);S.unseen=Math.max(0,S.unseen-1);render();openPump(p)};
+  if($("test"))$("test").onclick=()=>{if(!useVisit())return;addCard(p.test);S.unseen=Math.max(0,S.unseen-1);render();tagSheet(p.test,()=>openPump(p))};
   $("pet").onclick=()=>petition(p);
 }
 
@@ -345,10 +455,10 @@ $("bReg").onclick=()=>{
   if(S.plotted>=S.day){toast("No new returns until tomorrow");return}
   const from=S.plotted+1;S.plotted=S.day;let n=0;
   deaths.forEach(d=>{if(d.day>=from&&d.day<=S.day){setTimeout(()=>el("rect",{x:d.x-2.2,y:d.y-.9,width:4.4,height:1.8,class:"death new"},gD),n*10);n++}});
-  vib(20);if(addCard("reg"))toast("Registrar's returns added to case notes");render();
+  vib(20);if(addCard("reg")){S.unseen=Math.max(0,S.unseen-1);setTimeout(()=>tagSheet("reg"),1400)}render();
 };
 $("bZone").onclick=()=>{touch();S.zones=!S.zones;$("bZone").classList.toggle("on",S.zones);gZ.style.opacity=S.zones?.55:0;if(S.zones)toast("Each area shaded by its nearest pump")};
-$("bNotes").onclick=()=>{
+$("bNotes").onclick=()=>{if(S.started)EF.extra('Reread the case notes');
   touch();selectPump(null);const u=S.unseen;S.unseen=0;render();
   const list=S.cards.slice().reverse().map((id,i)=>cardHTML(id,i<u)).join("");
   sheet(`<h2>Case notes</h2>`+(list||`<p class="cost">Nothing yet. Tap the Registrar, or a place on the map.</p>`)+
@@ -362,7 +472,7 @@ function endDay(msg){
   const before=deaths.filter(d=>d.day<=S.day).length;
   S.day++;S.acts=PER_DAY;
   const added=deaths.filter(d=>d.day<=S.day).length-before;
-  if(S.day===3&&addCard("hampstead"))toast("A letter arrives from Hampstead");
+  if(S.day===3&&addCard("hampstead")){toast("A letter arrives from Hampstead");S.unseen=Math.max(0,S.unseen-1);setTimeout(()=>tagSheet("hampstead"),900)}
   else toast(msg||`${dates[S.day]}: ${added} more deaths reported`);
   render();vib(10);
 }
@@ -374,67 +484,108 @@ function petition(p){
   if(p.id!=="broad"){
     const why=p.id==="marl"?"Hardly anyone drinks from that pump. The neighbours say it stinks, and they walk to Broad Street instead.":"Few of the dead lived near that pump.";
     sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${why}</div><p>The Board refuses.</p><button class="btn red" id="ok">Next Day</button>`);
-    $("ok").onclick=()=>{endDay("The Board refused. A day lost.");if(p.id==="marl")hint("A foul smell is a clue about the air, not about who drank the water. Where did the people near that pump actually get theirs?")};
+    S.board.push({pump:p.name,ok:false});$("ok").onclick=()=>{endDay("The Board refused. A day lost.")};
     return;
   }
   ask(0);
 }
+function shuf(a,k){const r=a.map((x,i)=>[x,(Math.sin((i+1)*12.9898+k*78.233)*43758.5453)%1]);return r.sort((p,q)=>p[1]-q[1]).map(x=>x[0])}
 function ask(i){
   if(i>=OBJ.length){win();return}
-  const o=OBJ[i];
+  const o=OBJ[i];S.objI=i;EF.resolved();
   const opts=S.cards.filter(c=>c!=="reg");
-  let h=`<h2>The Board of Guardians</h2><p class="cost">Objection ${i+1} of ${OBJ.length}</p><div class="obj"><small>The Board</small>${o.q}</div><p>Which evidence answers this?</p>`;
-  h+=opts.map(c=>`<button class="opt" data-c="${c}">${CARDS[c].t}</button>`).join("");
+  let h=`<h2>The Board of Guardians</h2><p class="cost">Objection ${i+1} of ${OBJ.length}</p><div class="obj"><small>The Board</small>${o.q}</div><p>Which of your clues answers this?</p>`;
+  h+=opts.map(c=>`<button class="opt" data-c="${c}">${CARDS[c].from}</button>`).join("");
   h+=`<button class="opt none" data-c="">I can't answer that yet</button>`;
   sheet(h);
+  const fail=(c,why,said)=>{EF.mark({ok:false});EF.wrong();vib([40,40,40]);S.board.push({obj:i,card:c,why,ok:false,day:S.day});
+    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${o.q}</div><p>${said}</p><button class="btn red" id="ok">Next Day</button>`);
+    $("ok").onclick=()=>{endDay("The Board adjourned unconvinced.");hint(o.miss)}};
   document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
     const c=b.dataset.c;
-    if(o.ok.includes(c)){vib(15);sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>You</small>${CARDS[c].b}</div><p>The Board murmurs. That answer holds.</p><button class="btn red" id="nx">${i+1<OBJ.length?"Next objection":"Hear their decision"}</button>`);$("nx").onclick=()=>ask(i+1);return}
-    vib([40,40,40]);
-    const said=c?`That doesn't answer the objection. The Board is not persuaded.`:`Without an answer, the Board will not act today.`;
-    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${o.q}</div><p>${said}</p><button class="btn red" id="ok">Next Day</button>`);
-    $("ok").onclick=()=>{endDay("The Board adjourned unconvinced.");hint(o.miss)};
+    if(!c){fail("",null,"Without an answer, the Board will not act today.");return}
+    const ws=shuf(o.why.map((w,k)=>[w,k]),i+S.day);
+    sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>The Board</small>${o.q}</div>`+cardHTML(c)+`<p>Why does this answer them?</p>`+ws.map(([w,k])=>`<button class="opt" data-k="${k}">${w}</button>`).join(""));
+    document.querySelectorAll(".opt").forEach(r=>r.onclick=()=>{const k=+r.dataset.k,cardOk=o.ok.includes(c);
+      if(cardOk&&k===0){EF.mark({ok:true});vib(15);S.board.push({obj:i,card:c,why:o.why[0],ok:true,day:S.day});
+        sheet(`<h2>The Board of Guardians</h2><div class="obj"><small>You</small>${CARDS[c].b} ${o.why[0]}</div><p>The Board murmurs. That answer holds.</p><button class="btn red" id="nx">${i+1<OBJ.length?"Next objection":"Hear their decision"}</button>`);$("nx").onclick=()=>ask(i+1);return}
+      fail(c,o.why[k],cardOk?"The clue is sound, but that is not why it matters. The Board is not persuaded.":"That does not answer the objection. The Board is not persuaded.")});
   });
 }
 
-/* ---------- hints (idle only; no time pressure) ---------- */
-function nextHint(){
-  if(S.plotted<0)return "Start with the evidence. Tap the Registrar to plot where the dead lived.";
-  if(S.plotted<S.day)return "New returns from the Registrar are waiting.";
-  if(!S.zones)return "Try 'Nearest pump' to see which pump each household would use.";
-  if(!has("pit"))return "The Board talks of nothing but the old plague pit. Visit it so you know their case.";
-  if(S.acts>0&&!has("workhouse")&&!has("brewery"))return "If it were the air, everyone breathing it would suffer. Is anyone near the pit or the pump spared?";
-  if(S.acts>0&&!has("marlTest"))return "The Little Marlborough pump sits right by the pit. Is anyone drinking from it?";
-  if(S.acts>0&&!has("homes"))return "Some of the dead lived closer to other pumps. Their families might explain that.";
-  if(S.acts===0)return "You have used today's visits. Tap Next Day when you are ready.";
-  if(!has("hampstead"))return "The post may bring news from outside Soho. Tap Next Day to see.";
-  return "You may have enough to face the Board. Choose a pump and make your case.";
+/* ---------- hints: only when asked. First a question, then a pointer. ---------- */
+function hintState(){
+  if(S.plotted<0)return["reg","What would you want to know first about the dead?","The Registrar can plot where the dead lived."];
+  if(S.plotted<S.day)return["reg2","Has anything new come in today?","New returns from the Registrar are waiting."];
+  if(!S.zones)return["zone","The map shows where people died. What would show where they drank?","'Nearest pump' shades each area by its closest pump."];
+  if(!has("pit"))return["pit","What exactly is the Board's case? Have you seen it for yourself?","The Board talks of the old plague pit. It is on the map."];
+  if(S.acts>0&&!has("workhouse")&&!has("brewery"))return["spared","Whatever the cause is, who ought to be dying and is not?","Some large buildings sit inside the worst streets."];
+  if(S.acts>0&&!has("marlTest"))return["marl","Two pumps stand near the worst streets. Do you know who uses each?","You can examine the water at a pump."];
+  if(S.acts>0&&!has("homes"))return["homes","Which deaths fit your idea least well?","Some of the dead lived a long way from the others."];
+  if(S.acts===0)return["day","You have used today's visits.","Tap Next Day when you are ready."];
+  if(!has("hampstead"))return["post","Not all evidence is found on foot.","The post may bring news. Let a day pass."];
+  return["board","Could you answer everything the Board might say against you?","Choose a pump and make your case."];
 }
-setInterval(()=>{if(S.started&&!S.over&&performance.now()-S.lastAct>10000){hint(nextHint());S.lastAct=performance.now()}},1000);
+$("hintBtn").onclick=()=>{touch();const[k,q,p]=hintState();const second=S.hintKey===k;S.hintKey=second?null:k;S.hints++;hint(second?p:q)};
 
-$("start").onclick=()=>{$("intro").classList.add("hide");S.started=true;S.lastAct=performance.now();render()};
+const pickRow=(id,key)=>$(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{S.guess[key]=b.dataset.v;$(id).querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));
+  if(S.guess.pick&&S.guess.conf){const st=$("start");st.disabled=false;st.style.opacity=1}});
+pickRow("gPick","pick");pickRow("gConf","conf");
+$("start").onclick=()=>{const g=S.guess,d=g.conf==="high"?2:g.conf==="med"?1:0.5;g.b=g.pick==="air"?Math.round(3-d):g.pick==="water"?Math.round(3+d):3;S.belief=g.b;
+  $("intro").classList.add("hide");S.started=true;S.lastAct=performance.now();drawTrail();render()};
+const SOURCES=`<h3>Sources</h3><ul class="small">
+<li><a href="https://johnsnow.matrix.msu.edu/documentUploads/15-78-2BB/15-78-2BB-22-Doc26-II-MCC2.pdf" target="_blank" rel="noopener">John Snow, On the Mode of Communication of Cholera, 2nd ed. (1855), pp. 38 to 55, in the John Snow Archive, Michigan State University</a></li>
+<li><a href="https://epi-snow.ph.ucla.edu/Stream2_BSPoutbreak_a.html" target="_blank" rel="noopener">UCLA Fielding School of Public Health, John Snow site: the Broad Street pump outbreak</a></li>
+<li><a href="https://epi-snow.ph.ucla.edu/Stream2_BSPoutbreak_c.html" target="_blank" rel="noopener">UCLA John Snow site: the Lion Brewery and Snow's interview with Mr Huggins</a></li></ul>`;
+$("aboutBtn").onclick=()=>{const a=$("about");a.classList.remove("hide");a.innerHTML=`<div class="kicker">About this demo</div><h1>Broad Street, 1854</h1>
+<p class="small">A five minute simulation for a public health, statistics, history or research methods course. One objective: weigh evidence that points two ways and say why a clue supports or weakens an explanation.</p>
+<h3>What is real</h3><p class="small">The outbreak, the Broad Street pump, the brewery and the workhouse that were spared, the widow in Hampstead, the families who sent for Broad Street water, and the removal of the handle on 8 September 1854 are from Snow's own account. Sources give 535 or 530 workhouse inmates.</p>
+<h3>What is simplified</h3><p class="small">The map is a sketch, not Snow's map. The deaths on it are generated, about 340 where Snow counted more than 500. The nine days, two visits a day and the three objections are game rules. The speakers' words are written for this demo and are not quotations. The plague pit as the Board's main argument is compressed from the miasma debate of the time.</p>
+<h3>How your thinking is recorded</h3><p class="small">Your first guess, what you say each clue points to, where you stand after it, and the reasons you give the Board are kept on this page and shown back to you at the end. The debrief also reports how long you spent on open decisions, how long you kept working after the Board turned you down, and any optional work. Nothing is sent anywhere. The reference reading follows Snow's account. It is one reading, not a grade.</p>
+${SOURCES}<p class="small">Built with Claude for José Antonio Bowen, weteachwithai.com, as a workshop demo. No tracking.</p>
+<button class="btn red" id="aboutX">Close</button>`;$("aboutX").onclick=()=>a.classList.add("hide")};
 render();
 
+function debrief(){
+  const g=S.guess,GP={air:"foul air",water:"the water",other:"something else"},GC={low:"not very sure",med:"fairly sure",high:"very sure"};
+  const rows=S.trail.map((t,n)=>{const r=REF[t.id],same=r[0]===t.tag;
+    return `<tr><td>${n+1}. ${CARDS[t.id].t}<br><span class="small">Day ${t.day+1}</span></td><td>${TAGS[t.tag]}<br><span class="small">${BEL[t.from]} → ${BEL[t.belief]}</span></td><td>${TAGS[r[0]]}${same?"":" *"}<br><span class="small">${r[1]}</span></td></tr>`}).join("");
+  const moved=S.trail.filter(t=>t.belief!==t.from),big=S.trail.slice().sort((a,b)=>Math.abs(b.belief-b.from)-Math.abs(a.belief-a.from))[0];
+  const same=S.trail.filter(t=>REF[t.id][0]===t.tag).length;
+  const never=Object.keys(CARDS).filter(c=>!has(c)).map(c=>CARDS[c].t);
+  const bd=S.board.filter(b=>b.obj!=null).map(b=>`<tr><td>Objection ${b.obj+1}</td><td>${b.card?CARDS[b.card].from:"No answer"}${b.why?`<br><span class="small">${b.why}</span>`:""}</td><td>${b.ok?"Held":"Did not hold"}</td></tr>`).join("");
+  const wrongPump=S.board.filter(b=>b.pump).map(b=>b.pump);
+  const txt=["Broad Street 1854: reasoning summary",`First guess: ${GP[g.pick]}, ${GC[g.conf]}`,...S.trail.map((t,n)=>`${n+1}. ${CARDS[t.id].t} (day ${t.day+1}): said ${TAGS[t.tag]}; ${BEL[t.from]} to ${BEL[t.belief]}`),...S.board.filter(b=>b.obj!=null).map(b=>`Objection ${b.obj+1}: ${b.card?CARDS[b.card].from:"no answer"}${b.why?" because "+b.why:""} (${b.ok?"held":"did not hold"})`),`Hints asked: ${S.hints}`,EF.text()].join("\n");
+  return EF.html()+`<h3>Your thinking</h3>
+  <p class="small">You began with <b>${GP[g.pick]}</b>, ${GC[g.conf]}. You ended at <b>${BEL[S.belief].toLowerCase()}</b>. ${moved.length} of ${S.trail.length} clues moved you.${big&&big.belief!==big.from?` The largest move came after "${CARDS[big.id].t}".`:""} You asked Whitehead ${S.hints} time${S.hints===1?"":"s"}.</p>
+  ${rows?`<table class="deb"><tr><th>Clue, in your order</th><th>You said</th><th>Snow's reading</th></tr>${rows}</table><p class="small">Your reading matched Snow's on ${same} of ${S.trail.length}. * marks a difference. A difference is worth discussing. It is not a wrong answer.</p>`:""}
+  ${never.length?`<p class="small">Clues you did not collect: ${never.join(", ")}.</p>`:""}
+  ${wrongPump.length?`<p class="small">You first asked the Board to close: ${wrongPump.join(", ")}.</p>`:""}
+  ${bd?`<h3>Before the Board</h3><table class="deb"><tr><th></th><th>Your clue and reason</th><th></th></tr>${bd}</table>`:""}
+  <h3>Take it elsewhere</h3><p class="small">A map of where cases cluster is not a map of the cause. Name one dataset in your own field where the two could be confused.</p>
+  <button class="btn ghost" id="copyBtn">Copy my reasoning summary</button><textarea id="copyTxt" style="position:absolute;left:-9999px">${txt}</textarea>`;
+}
+function endScreen(head){
+  const e=$("end");e.classList.remove("hide");
+  e.innerHTML=`<p class="ask" style="margin-top:0">Before you see the record: how well did you reason?</p><div class="pick three" id="rate"><button data-v="Guessed">Mostly guessed</button><button data-v="Mixed">Some of each</button><button data-v="Reasoned">Followed the evidence</button></div>`;
+  $("rate").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.rate=b.dataset.v;
+    e.innerHTML=head+`<p class="small">Your own rating: ${b.textContent.toLowerCase()}.</p>`+debrief()+SOURCES+`<button class="btn red" onclick="location.reload()">Play again</button>`;e.scrollTop=0;
+    $("copyBtn").onclick=()=>{const t=$("copyTxt");t.select();try{navigator.clipboard?navigator.clipboard.writeText(t.value):document.execCommand("copy");$("copyBtn").textContent="Copied"}catch(x){}}});
+}
 function win(){
   S.over=true;closeSheet();vib([30,60,120]);
   const p=pumps[0];p.node.classList.add("gone");
-  setTimeout(()=>{
-    const e=$("end");e.classList.remove("hide");
-    e.innerHTML=`<div class="handle">🔧</div><div class="kicker">${dates[S.day]} 1854</div>
+  setTimeout(()=>endScreen(`<div class="handle">🔧</div><div class="kicker">${dates[S.day]} 1854</div>
     <h1>The handle comes off.</h1>
     <p>You answered the Board on day ${S.day+1}${S.petitions>1?`, after ${S.petitions-1} failed attempt${S.petitions>2?"s":""}`:""}.</p>
-    <p style="font-size:14px;color:#bfae8e">The real Board removed it on 8 September 1854, though deaths were already falling. Most of the Board still believed in bad air. Later, Rev. Whitehead traced the likely source: a baby's soiled nappies rinsed into a cesspool beside the well at 40 Broad Street.</p>
-    <button class="btn red" onclick="location.reload()">Play again</button>`;
-  },600);
+    <p class="small">The real Board removed it on 8 September 1854, though deaths were already falling. Most of the Board still believed in bad air. Later, Rev. Whitehead traced the likely source: a baby's soiled nappies rinsed into a cesspool beside the well at 40 Broad Street.</p>`),600);
 }
 function lose(){
   S.over=true;closeSheet();
-  const e=$("end");e.classList.remove("hide");
-  e.innerHTML=`<div class="kicker">8 September 1854</div><h1>The Board adjourned.</h1>
-  <p>The Guardians went home still blaming the air, and the pump kept pouring.</p>
-  <p style="font-size:14px;color:#bfae8e">Try again. The Board will raise three objections. Each one needs a different piece of evidence.</p>
-  <button class="btn red" onclick="location.reload()">Try again</button>`;
+  endScreen(`<div class="kicker">8 September 1854</div><h1>The Board adjourned.</h1>
+  <p>The Guardians went home unpersuaded, and every pump kept pouring.</p>`);
 }
+window.__demo={S,CARDS,OBJ,REF,state:()=>JSON.parse(JSON.stringify({day:S.day,cards:S.cards,trail:S.trail,board:S.board,hints:S.hints,belief:S.belief,over:S.over}))};
 })();
 </script>
 </body>
